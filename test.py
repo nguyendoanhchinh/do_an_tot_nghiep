@@ -52,18 +52,8 @@ def open_file():
 
 # Hàm chức năng Lưu
 def save_file():
-    global image
-    if image is not None:
-        file_path = filedialog.asksaveasfilename(defaultextension=".jpg")
-        if file_path:
-            # Chuyển đổi ảnh về dạng NumPy array
-            image_np = np.array(image)
-
-            # Chuyển đổi sang định dạng BGR
-            image_bgr = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
-            
-            # Lưu ảnh bằng OpenCV
-            cv2.imwrite(file_path, image_bgr)
+    return true;
+#Tùy Chỉnh độ sáng ảnh
 def adjust_brightness():
     global image, brightness_scale, brightness_label
     if img_org is None:
@@ -131,88 +121,68 @@ def adjust_gamma():
 def balance_color():
     global img_org
 
-    # Use the original image from the open_file() function
     if img_org is None:
         messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước khi cân bằng màu!")
         return
 
-    # Create a new window for displaying histograms
-    histogram_window = tk.Toplevel(root)
-    histogram_window.title("Biểu đồ histogram")
-    histogram_window.geometry("900x500")
+    # Thực hiện cân bằng màu
+    if not isinstance(img_org, np.ndarray):
+        img_org = np.array(img_org)
 
-    # Calculate and plot histograms for the original image
-    img_org_gray = img_org.convert('L')
-    histogram_org = img_org_gray.histogram()
+    # Tiếp tục với các bước cân bằng màu
+    img_yuv = cv2.cvtColor(img_org, cv2.COLOR_RGB2YUV)
+    img_yuv[:, :, 0] = cv2.equalizeHist(img_yuv[:, :, 0])
+    img_equa = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2RGB)
 
-    # Create a frame for the original image and its histogram
-    org_frame = tk.Frame(histogram_window)
-    org_frame.pack(side=tk.LEFT, padx=10, pady=10)
+    # Tính toán histogram
+    hist_org = cv2.calcHist([img_org], [0], None, [256], [0, 256])
+    hist_equa = cv2.calcHist([img_equa], [0], None, [256], [0, 256])
 
-    # Display the original image
-    img_org_tk = ImageTk.PhotoImage(img_org)
-    org_label = tk.Label(org_frame, image=img_org_tk)
-    org_label.image = img_org_tk
-    org_label.pack()
+    # Tạo cửa sổ
+    plt.figure(figsize=(10, 6))
+    plt.tight_layout()
 
-    # Plot the histogram for the original image
-    plt.figure(figsize=(5, 3))
+    # Hiển thị ảnh gốc
+    plt.subplot(2, 2, 1)
+    plt.imshow(img_org)
+    plt.axis('off')
+    plt.title('Ảnh gốc')
+
+    # Hiển thị biểu đồ histogram ảnh gốc
+    plt.subplot(2, 2, 2)
+    plt.plot(hist_org)
     plt.title('Histogram ảnh gốc')
-    plt.plot(histogram_org)
-    plt.grid(True)
-    plt.tight_layout()
 
-    canvas_org = FigureCanvasTkAgg(plt.gcf(), master=org_frame)
-    canvas_org.draw()
-    canvas_org.get_tk_widget().pack(pady=10)
+    # Hiển thị ảnh sau khi cân bằng màu
+    plt.subplot(2, 2, 3)
+    plt.imshow(img_equa)
+    plt.axis('off')
+    plt.title('Ảnh sau khi cân bằng màu')
 
-    # Process the image and calculate histograms for the equalized image
-    img_equa = img_org.convert('YCbCr')
-    channels = list(img_equa.split())
-    size = channels[0].size
-    channels = [channel.convert('L') for channel in channels]
-    channels = [np.array(channel) for channel in channels]
-    img_equa = Image.merge('YCbCr', [Image.fromarray(channel).resize(size) for channel in channels])
-
-    # Create a frame for the equalized image and its histogram
-    equa_frame = tk.Frame(histogram_window)
-    equa_frame.pack(side=tk.LEFT, padx=10, pady=10)
-
-    # Display the equalized image
-    img_equa_tk = ImageTk.PhotoImage(img_equa)
-    equa_label = tk.Label(equa_frame, image=img_equa_tk)
-    equa_label.image = img_equa_tk
-    equa_label.pack()
-
-    # Calculate and plot histograms for the equalized image
-    histogram_equa = channels[0].flatten()
-
-    plt.figure(figsize=(5, 3))
+    # Hiển thị biểu đồ histogram ảnh sau khi cân bằng màu
+    plt.subplot(2, 2, 4)
+    plt.plot(hist_equa)
     plt.title('Histogram sau khi cân bằng')
-    plt.plot(histogram_equa)
-    plt.grid(True)
-    plt.tight_layout()
 
-    canvas_equa = FigureCanvasTkAgg(plt.gcf(), master=equa_frame)
-    canvas_equa.draw()
-    canvas_equa.get_tk_widget().pack(pady=10)
+    # Hiển thị cửa sổ
+    plt.show()
 
-    # Create a new window for displaying the processed image
-    image_window = tk.Toplevel(root)
-    image_window.title("Ảnh sau khi cân bằng")
-    image_window.geometry("500x400")
+    # Tạo cửa sổ Tkinter để chứa nút "Lưu ảnh"
+    root = Tk()
 
-    # Display the processed image
-    photo_equa = ImageTk.PhotoImage(img_equa)
-    image_label = tk.Label(image_window, image=photo_equa)
-    image_label.image = photo_equa
-    image_label.pack()
+    def save_image():
+        # Lưu ảnh sau khi cân bằng
+        output_path = filedialog.asksaveasfilename(defaultextension='.jpg', filetypes=[('JPEG Files', '*.jpg')])
+        if output_path:
+            cv2.imwrite(output_path, img_equa)
+            messagebox.showinfo("Thông báo", "Đã lưu ảnh sau khi cân bằng vào:\n" + output_path)
 
-    # Keep references to the windows to avoid garbage collection
-    histogram_window.image_canvas = canvas_org
-    histogram_window.image_window = image_window
+    # Tạo nút "Lưu ảnh"
+    button_save = Button(root, text="Lưu ảnh", command=save_image)
+    button_save.pack()
 
-
+    # Hiển thị cửa sổ Tkinter
+    root.mainloop()
 
 # Hàm chức năng Thoát
 def exit_program():
