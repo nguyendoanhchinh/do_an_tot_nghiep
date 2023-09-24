@@ -32,7 +32,7 @@ def open_file():
         if file_path.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif')):
             # Load the original image
             img_org = Image.open(file_path)
-            img_org = img_org.resize((250, 300), Image.Resampling.LANCZOS)
+            img_org = img_org.resize((300, 350), Image.Resampling.LANCZOS)
             
             # Display the original image
             photo = ImageTk.PhotoImage(img_org)
@@ -88,24 +88,9 @@ def update_brightness(event=None):
     brightness_value = int(brightness_scale.get())
     adjusted_image = cv2.convertScaleAbs(np.array(image), alpha=1, beta=brightness_value)
     cv2.imshow("Brightness Adjustment", adjusted_image)
-# Hàm chức năng Hiệu chỉnh độ sáng
+# Hàm chức năng Hiệu chỉnh độ tương phản
 def adjust_contrast():
-    global image, image_tk, image_label
-    if image is not None:
-        contrast = tk.simpledialog.askfloat("Contrast", "Enter contrast value (0.0 to 3.0):", minvalue=0.0, maxvalue=3.0)
-        if contrast is not None:
-            f = 131 * (contrast + 127) / (127 * (131 - contrast))
-            alpha_c = f
-            gamma_c = 127 * (1 - f)
-            image = cv2.addWeighted(image, alpha_c, np.zeros(image.shape, dtype=image.dtype), 0, gamma_c)
-            image_pil = Image.fromarray(image)
-            image_tk = ImageTk.PhotoImage(image_pil)
-            if image_label is None:
-                image_label = tk.Label(root, image=image_tk)
-                image_label.pack()
-            else:
-                image_label.config(image=image_tk)
-
+    return true;
 # Hàm chức năng Hiệu chỉnh gamma
 def adjust_gamma():
     global image, image_tk, image_label
@@ -133,7 +118,9 @@ def balance_color():
     img_yuv = cv2.cvtColor(img_org, cv2.COLOR_RGB2YUV)
     img_yuv[:, :, 0] = cv2.equalizeHist(img_yuv[:, :, 0])
     img_equa = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2RGB)
-
+# Chỉnh kích thước ảnh
+    img_org_resized = cv2.resize(img_org, (400, 300))
+    img_equa_resized = cv2.resize(img_equa, (400, 300))
     # Tính toán histogram
     hist_org = cv2.calcHist([img_org], [0], None, [256], [0, 256])
     hist_equa = cv2.calcHist([img_equa], [0], None, [256], [0, 256])
@@ -171,19 +158,21 @@ def balance_color():
     root = Tk()
 
     def save_image():
+        nonlocal img_equa  # Sử dụng biến img_equa trong phạm vi hàm này
+
         # Lưu ảnh sau khi cân bằng
         output_path = filedialog.asksaveasfilename(defaultextension='.jpg', filetypes=[('JPEG Files', '*.jpg')])
         if output_path:
-            cv2.imwrite(output_path, img_equa)
+            cv2.imwrite(output_path, cv2.cvtColor(img_equa, cv2.COLOR_RGB2BGR))  # Chuyển đổi về BGR trước khi lưu
             messagebox.showinfo("Thông báo", "Đã lưu ảnh sau khi cân bằng vào:\n" + output_path)
 
     # Tạo nút "Lưu ảnh"
     button_save = Button(root, text="Lưu ảnh", command=save_image)
     button_save.pack()
 
-    # Hiển thị cửa sổ Tkinter
-    root.mainloop()
-
+# Khử nhiễu trong ảnh
+def image_filter():
+    return true;
 # Hàm chức năng Thoát
 def exit_program():
     root.destroy()
@@ -208,7 +197,7 @@ image_menu.add_command(label="Hiệu chỉnh ánh sáng", command=adjust_brightn
 image_menu.add_command(label="Hiệu chỉnh độ tương phản", command=adjust_contrast)
 image_menu.add_command(label="Hiệu chỉnh gamma", command=adjust_gamma)
 image_menu.add_command(label="Cân bằng màu", command=balance_color)
-
+image_menu.add_command(label="Khử nhiễu trong ảnh", command=image_filter)
 # Tạo menu Cửa sổ
 window_menu = tk.Menu(menu_bar)
 menu_bar.add_cascade(label="Cửa sổ", menu=window_menu)
