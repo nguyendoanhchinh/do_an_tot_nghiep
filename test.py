@@ -8,6 +8,7 @@ from tkinter.filedialog import askopenfilename
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import messagebox
 import numpy as np
+from tkinter import Scale
 # Khởi tạo biến image
 image = None
 panelA = None
@@ -18,23 +19,21 @@ img_org = None
 root = tk.Tk()
 root.title("Phần mềm Xử lý ảnh")
 # Đặt kích thước cửa sổ
-root.geometry("500x400")
+root.geometry("500x500")
 
-# Cho phép cửa sổ thay đổi kích thước
-root.resizable(True, True)
 # Hàm chức năng Mở
 def open_file():
-    global image, label, img_org  # Add img_org to store the original image
+    global image, label, img_org  
     file_path = filedialog.askopenfilename()
   
     if file_path:
         # Kiểm tra đuôi file
-        if file_path.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif')):
-            # Load the original image
+        if file_path.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif','.webp')):
+            # Tải ảnh gốc
             img_org = Image.open(file_path)
             img_org = img_org.resize((300, 350), Image.Resampling.LANCZOS)
             
-            # Display the original image
+            # Hiển thị ảnh gốc
             photo = ImageTk.PhotoImage(img_org)
             try:
                 label.configure(image=photo)
@@ -44,50 +43,45 @@ def open_file():
                 label.image = photo
                 label.pack()
             
-            # Store the original image in the 'image' variable
+           # Lưu ảnh gốc vào biến 'image'
             image = np.array(img_org)
         else:
             print("Định dạng ảnh không hỗ trợ.")
 
 
-# Hàm chức năng Lưu
-def save_file():
-    return true;
+
 #Tùy Chỉnh độ sáng ảnh
-def adjust_brightness():
-    global image, brightness_scale, brightness_label
+
+
+def brightness():
+    global img_org
+
     if img_org is None:
-        messagebox.showwarning("Lỗi", "Vui lòng chọn  ảnh trước !")
+        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
-    if image is not None:
-        brightness_scale = tk.Scale(root, from_=-255, to=255, orient="horizontal", label="Độ sáng", showvalue=1, sliderlength=20, length=300)
-        brightness_scale.pack()
-        brightness_scale.set(0)  # Đặt giá trị mặc định cho thanh kéo
 
-        brightness_label = tk.Label(root, text="0", font=("Helvetica", 12))
-        brightness_label.pack()
+    def adjust_brightness(val):
+        val = int(val) / 100
 
-        brightness_scale.bind("<B1-Motion>", on_brightness_change)
-        brightness_scale.bind("<ButtonRelease-1>", update_brightness)
+        img = img_org.copy()
+        img = img.point(lambda p: p * val)
 
-        update_brightness()
+        img_cv2 = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        img_pil = Image.fromarray(img_cv2)
 
-def on_brightness_change(event):
-    global image, brightness_scale, brightness_label
+        cv2.namedWindow('Ảnh sau khi điều chỉnh độ sáng', cv2.WINDOW_NORMAL)
+        cv2.imshow('Ảnh sau khi điều chỉnh độ sáng', img_cv2)
+        cv2.resizeWindow('Ảnh sau khi điều chỉnh độ sáng', img_pil.width, img_pil.height)
 
-    brightness_value = int(brightness_scale.get())
-    adjusted_image = cv2.convertScaleAbs(np.array(image), alpha=1, beta=brightness_value)
-    cv2.imshow("Brightness Adjustment", adjusted_image)
+    brightness_scale = Scale(root, from_=0, to=255, orient="horizontal", label="Độ sáng",
+                             showvalue=1, sliderlength=20, length=300, command=adjust_brightness)
+    brightness_scale.pack()
 
-    # Cập nhật giá trị chỉ số độ sáng
-    brightness_label.config(text=str(brightness_value))
-
-def update_brightness(event=None):
-    global image, brightness_scale
-
-    brightness_value = int(brightness_scale.get())
-    adjusted_image = cv2.convertScaleAbs(np.array(image), alpha=1, beta=brightness_value)
-    cv2.imshow("Brightness Adjustment", adjusted_image)
+    # Hiển thị ảnh gốc ban đầu
+    photo = ImageTk.PhotoImage(image=img_org)
+    label = Label(root, image=photo)
+    label.image = photo
+    label.pack()
 # Hàm chức năng Hiệu chỉnh độ tương phản
 def adjust_contrast():
     return true;
@@ -102,12 +96,12 @@ def adjust_gamma():
             cv2.imshow("Image", result)
             cv2.waitKey(1)
 
-# Hàm chức năng Cân bằng màu
+# Hàm chức năng Cân bằng sáng
 def balance_color():
     global img_org
 
     if img_org is None:
-        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước khi cân bằng màu!")
+        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
 
     # Thực hiện cân bằng màu
@@ -185,18 +179,16 @@ root.config(menu=menu_bar)
 file_menu = tk.Menu(menu_bar)
 menu_bar.add_cascade(label="Tệp tin", menu=file_menu)
 file_menu.add_command(label="Mở", command=open_file)
-file_menu.add_command(label="Lưu", command=save_file)
 file_menu.add_separator()
-
 file_menu.add_command(label="Thoát", command=exit_program)
 
 # Tạo menu Xử lý ảnh
 image_menu = tk.Menu(menu_bar)
 menu_bar.add_cascade(label="Xử lý ảnh", menu=image_menu)
-image_menu.add_command(label="Hiệu chỉnh ánh sáng", command=adjust_brightness)
+image_menu.add_command(label="Hiệu chỉnh ánh sáng", command=brightness)
 image_menu.add_command(label="Hiệu chỉnh độ tương phản", command=adjust_contrast)
 image_menu.add_command(label="Hiệu chỉnh gamma", command=adjust_gamma)
-image_menu.add_command(label="Cân bằng màu", command=balance_color)
+image_menu.add_command(label="Cân bằng ảnh", command=balance_color)
 image_menu.add_command(label="Khử nhiễu trong ảnh", command=image_filter)
 # Tạo menu Cửa sổ
 window_menu = tk.Menu(menu_bar)
