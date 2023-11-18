@@ -1,49 +1,35 @@
+from PIL import Image
 import numpy as np
-import cv2
-from tkinter import Tk
-from tkinter.filedialog import askopenfilename
 
-def color_balance(image):
-    # Tính toán histogram của ảnh
-    histogram = [np.zeros(256, dtype=np.int32) for _ in range(3)]
-    for i in range(3):
-        histogram[i] = cv2.calcHist([image], [i], None, [256], [0, 256])
+def adjust_gamma(image, gamma_r, gamma_g, gamma_b):
+    # Chuyển đổi ảnh thành mảng numpy
+    np_image = np.array(image)
 
-    # Tính toán histogram tích lũy
-    cumulative_histogram = [np.zeros(256, dtype=np.float32) for _ in range(3)]
-    for i in range(3):
-        cumulative_histogram[i] = np.cumsum(histogram[i])
+    # Tách các kênh màu
+    red_channel, green_channel, blue_channel = np_image[:, :, 0], np_image[:, :, 1], np_image[:, :, 2]
 
-    # Chuẩn hóa histogram tích lũy
-    total_pixels = image.shape[0] * image.shape[1]
-    normalized_histogram = [np.zeros(256, dtype=np.float32) for _ in range(3)]
-    for i in range(3):
-        normalized_histogram[i] = cumulative_histogram[i] / total_pixels
+    # Áp dụng chỉ số gamma cho từng kênh màu
+    adjusted_red = np.power(red_channel / 255.0, gamma_r) * 255.0
+    adjusted_green = np.power(green_channel / 255.0, gamma_g) * 255.0
+    adjusted_blue = np.power(blue_channel / 255.0, gamma_b) * 255.0
 
-    # Tạo ánh xạ màu mới
-    mapping = [np.zeros(256, dtype=np.uint8) for _ in range(3)]
-    for i in range(3):
-        mapping[i] = np.round(normalized_histogram[i] * 255)
+    # Ghép các kênh màu đã điều chỉnh lại thành ảnh mới
+    adjusted_image = np.stack((adjusted_red, adjusted_green, adjusted_blue), axis=2).astype(np.uint8)
 
-    # Áp dụng ánh xạ màu mới
-    result = np.copy(image)
-    for i in range(3):
-        result[:, :, i] = cv2.LUT(image[:, :, i], mapping[i])
+    # Chuyển đổi mảng numpy thành đối tượng Image
+    adjusted_image = Image.fromarray(adjusted_image)
 
-    return result
+    return adjusted_image
 
-# Mở hộp thoại chọn tập tin
-Tk().withdraw()
-filename = askopenfilename()
+# Đường dẫn đến ảnh cần điều chỉnh gamma
+image_path = "image/anh.jpg"
 
-# Đọc ảnh
-image = cv2.imread(filename)
+# Đọc ảnh gốc
+original_image = Image.open(image_path)
 
-# Cân bằng màu
-balanced_image = color_balance(image)
+# Điều chỉnh gamma theo từng kênh màu (gamma_r, gamma_g, gamma_b)
+gamma_adjusted_image = adjust_gamma(original_image, 1.2, 0.8, 0.9)
 
-# Hiển thị ảnh gốc và ảnh đã cân bằng màu
-cv2.imshow('Original Image', image)
-cv2.imshow('Color Balanced Image', balanced_image)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# Hiển thị ảnh gốc và ảnh đã điều chỉnh gamma
+original_image.show()
+gamma_adjusted_image.show()
