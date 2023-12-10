@@ -1,3 +1,4 @@
+#import các thư viện
 import cv2
 import tkinter as tk
 from tkinter import filedialog
@@ -5,7 +6,7 @@ import matplotlib.pyplot as plt
 from tkinter import Tk, Label, Button, PhotoImage
 from PIL import Image, ImageTk
 from tkinter.filedialog import askopenfilename
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg 
 from tkinter import messagebox
 import numpy as np
 from tkinter import Scale
@@ -17,6 +18,8 @@ contrast_scale = None
 gamma_scale = None
 label_org = None
 label_adj = None
+
+# hiển thị giao diện chính giữa màn hình
 def center_window(window, width, height):
     screen_width = window.winfo_screenwidth()
     screen_height = window.winfo_screenheight()
@@ -64,11 +67,11 @@ def open_file():
             image = np.array(img_org)
         else:
             messagebox.showwarning("Lỗi", "Định dạng ảnh không được hỗ trợ.")
-
+# điều chỉnh kích thước ảnh  trong khung
 def resize_image_to_label(img, label_width, label_height):
-    aspect_ratio = img.width / img.height
-    new_width = min(img.width, label_width)
-    new_height = int(new_width / aspect_ratio)
+    aspect_ratio = img.width / img.height  # tính tỷ kệ kích thước khung
+    new_width = min(img.width, label_width)  # chiều rộng của khung
+    new_height = int(new_width / aspect_ratio)# chiều cao của khung
 
     # Nếu chiều cao mới lớn hơn chiều cao của nhãn, thì thu nhỏ ảnh
     if new_height > label_height:
@@ -76,7 +79,7 @@ def resize_image_to_label(img, label_width, label_height):
         new_width = int(new_height * aspect_ratio)
 
     return img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-
+# 
 def update_label_size(label, width, height):
     label.config(width=width, height=height)
 
@@ -86,9 +89,9 @@ def display_image(img, label):
     label.configure(image=photo)
     label.image = photo
 
-# Hàm điều chỉnh độ sáng và độ tương phản
-def adjust_brightness_and_contrast():
-    global img_org, brightness_scale, contrast_scale, gamma_scale, label_adj
+# Hàm điều chỉnh độ sáng 
+def adjust_brightness():
+    global img_org, brightness_scale, label_adj
 
     # Kiểm tra nếu có widgets của chức năng trước đó, thì hủy bỏ chúng
     destroy_previous_widgets()
@@ -97,44 +100,72 @@ def adjust_brightness_and_contrast():
         messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
 
-    # Tạo thanh điều chỉnh độ sáng và độ tương phản
+    # Tạo thanh điều chỉnh độ sáng
     brightness_scale = Scale(image_frame_right, from_=0, to=255, orient="horizontal", label="Độ sáng",
-                             showvalue=1, sliderlength=20, length=300, command=update_adjusted_image)
+                             showvalue=1, sliderlength=20, length=300, command=update_brightness)
     brightness_scale.pack()
 
-    contrast_scale = Scale(image_frame_right, from_=0.1, to=3.0, orient="horizontal", label="Độ tương phản",
-                           resolution=0.1, showvalue=1, sliderlength=20, length=300, command=update_adjusted_image)
-    contrast_scale.pack()
-
     # Gọi hàm cập nhật ảnh đã điều chỉnh
-    update_adjusted_image()
+    update_brightness()
 
-# Hàm cập nhật ảnh đã điều chỉnh
-def update_adjusted_image(*args):
-    global img_org, brightness_scale, contrast_scale, label_adj
+# Hàm cập nhật ảnh đã điều chỉnh cho độ sáng
+def update_brightness(*args):
+    global img_org, brightness_scale, label_adj
 
     if img_org is None:
         return
 
     brightness_val = brightness_scale.get() / 100
-    contrast_val = contrast_scale.get()
 
     adjusted_img = img_org.copy()
 
     # Điều chỉnh độ sáng
     adjusted_img = adjusted_img.point(lambda p: p * brightness_val)
 
+    # Hiển thị ảnh đã điều chỉnh
+    display_image(adjusted_img, label_adj)
+# độ tương phản
+def adjust_contrast():
+    global img_org, contrast_scale, label_adj
+
+    # Kiểm tra nếu có widgets của chức năng trước đó, thì hủy bỏ chúng
+    destroy_previous_widgets()
+
+    if img_org is None:
+        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
+        return
+
+    # Tạo thanh điều chỉnh độ tương phản
+    contrast_scale = Scale(image_frame_right, from_=0.1, to=3.0, orient="horizontal", label="Độ tương phản",
+                           resolution=0.1, showvalue=1, sliderlength=20, length=300, command=update_contrast)
+    contrast_scale.pack()
+
+    # Gọi hàm cập nhật ảnh đã điều chỉnh
+    update_contrast()
+
+# Hàm cập nhật ảnh đã điều chỉnh cho độ tương phản
+def update_contrast(*args):
+    global img_org, contrast_scale, label_adj
+
+    if img_org is None:
+        return
+
+    contrast_val = contrast_scale.get()
+
+    adjusted_img = img_org.copy()
+
     # Điều chỉnh độ tương phản
     for x in range(adjusted_img.width):
         for y in range(adjusted_img.height):
             r, g, b = adjusted_img.getpixel((x, y))
-            new_r = int((r - 128) * contrast_val + 128)
-            new_g = int((g - 128) * contrast_val + 128)
-            new_b = int((b - 128) * contrast_val + 128)
+            new_r = int((r - 255) * contrast_val + 255)
+            new_g = int((g - 255) * contrast_val + 255)
+            new_b = int((b - 255) * contrast_val + 255)
             adjusted_img.putpixel((x, y), (new_r, new_g, new_b))
 
     # Hiển thị ảnh đã điều chỉnh
     display_image(adjusted_img, label_adj)
+
 
 # Hàm điều chỉnh gamma
 def adjust_gamma():
@@ -203,7 +234,8 @@ file_menu.add_command(label="Thoát", command=exit_program)
 menu_bar.add_cascade(label="Tệp", menu=file_menu)
 
 edit_menu = tk.Menu(menu_bar)
-edit_menu.add_command(label="Điều chỉnh độ sáng và độ tương phản", command=adjust_brightness_and_contrast)
+edit_menu.add_command(label="Điều chỉnh độ sáng ", command=adjust_brightness)
+edit_menu.add_command(label="Điều chỉnh độ tương phản", command=adjust_contrast)
 edit_menu.add_command(label="Hiệu chỉnh gamma", command=adjust_gamma)
 menu_bar.add_cascade(label="Chỉnh sửa", menu=edit_menu)
 

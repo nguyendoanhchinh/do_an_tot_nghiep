@@ -9,7 +9,7 @@ import numpy as np
 # Khởi tạo biến image
 image = None
 img_org = None
-
+save_button = None
 # Tạo cửa sổ gốc
 root = tk.Tk()
 root.title("Phần mềm Xử lý ảnh")
@@ -56,7 +56,10 @@ def open_file():
             image = np.array(img_org)
         else:
             messagebox.showwarning("Lỗi", "Định dạng ảnh không hỗ trợ.")
-
+def enable_save_button():
+    global save_button
+    if save_button:
+        save_button.config(state="normal")
 # Hàm điều chỉnh độ sáng và độ tương phản
 def adjust_brightness_and_contrast():
     global img_org, brightness_scale, contrast_scale
