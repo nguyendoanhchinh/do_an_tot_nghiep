@@ -1,18 +1,22 @@
 import cv2
 import tkinter as tk
+from tkinter import ttk
 from tkinter import filedialog, simpledialog
 from tkinter import messagebox
 from tkinter import Scale
 from PIL import Image, ImageTk
 import numpy as np
+from random import randint, choice
 
 # Khởi tạo biến image
 image = None
 img_org = None
 save_button = None
+
 # Tạo cửa sổ gốc
 root = tk.Tk()
 root.title("Phần mềm Xử lý ảnh")
+
 # Đặt kích thước cửa sổ
 root.geometry("800x500")
 
@@ -30,32 +34,53 @@ image_frame_left.pack()
 image_frame_right = tk.Frame(frame_right, bd=2, relief=tk.SOLID)
 image_frame_right.pack()
 
+# Tạo thanh cuộn
+scrollbar = ttk.Scrollbar(root, orient="vertical")
+scrollbar.pack(side="right", fill="y")
+
+# Tạo khung cuộn để chứa nội dung
+canvas = tk.Canvas(root, yscrollcommand=scrollbar.set)
+canvas.pack(side="left", padx=20, pady=20, fill="both", expand=True)
+
+# Tạo khung con trong khung cuộn để hiển thị ảnh gốc
+scrollable_frame = ttk.Frame(canvas)
+canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+# Thiết lập cuộc thi cuộn
+scrollbar.config(command=canvas.yview)
+
 # Hàm chức năng Mở
 def open_file():
-    global image, label, img_org  
+    global image, label, img_org, scrollable_frame
+
+    # Xóa nội dung cũ trong khung cuộn
+    for widget in scrollable_frame.winfo_children():
+        widget.destroy()
+
     file_path = filedialog.askopenfilename()
-  
+
     if file_path:
         # Kiểm tra đuôi file
-        if file_path.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif','.webp')):
+        if file_path.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp')):
             # Tải ảnh gốc
             img_org = Image.open(file_path)
             img_org = img_org.resize((300, 350), Image.Resampling.LANCZOS)
-            
+
             # Hiển thị ảnh gốc
             photo = ImageTk.PhotoImage(img_org)
-            try:
-                label.configure(image=photo)
-                label.image = photo
-            except NameError:
-                label = tk.Label(image_frame_left, image=photo)
-                label.image = photo
-                label.pack()
-            
-           # Lưu ảnh gốc vào biến 'image'
+            label = tk.Label(scrollable_frame, image=photo)
+            label.image = photo
+            label.pack()
+
+            # Lưu ảnh gốc vào biến 'image'
             image = np.array(img_org)
+
+            # Cập nhật kích thước khung cuộn
+            scrollable_frame.update_idletasks()
+            canvas.config(scrollregion=canvas.bbox("all"))
         else:
             messagebox.showwarning("Lỗi", "Định dạng ảnh không hỗ trợ.")
+
 def enable_save_button():
     global save_button
     if save_button:
@@ -143,6 +168,7 @@ def sharpen():
         label.configure(image=photo)
         label.image = photo
 
+
 # Hàm chức năng Cân bằng màu
 def balance_color():
     global image, img_org, label
@@ -197,6 +223,7 @@ image_menu.add_command(label="Hiệu chỉnh gamma", command=adjust_gamma)
 image_menu.add_command(label="Tạo độ sắc nét", command=sharpen)
 image_menu.add_command(label="Cân bằng màu", command=balance_color)
 image_menu.add_command(label="Khử nhiễu trong ảnh", command=image_filter)
+#image_menu.add_command(label="Xoay ảnh", command=ratote_image)
 
 # Tạo menu Cửa sổ
 window_menu = tk.Menu(menu_bar)
@@ -208,3 +235,7 @@ help_menu = tk.Menu(menu_bar)
 menu_bar.add_cascade(label="Trợ giúp", menu=help_menu)
 
 root.mainloop()
+
+
+
+

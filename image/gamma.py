@@ -1,98 +1,88 @@
-import tkinter as tk
-from tkinter import filedialog
-from tkinter import messagebox
-from tkinter import Scale
-from PIL import Image, ImageTk
+
+import cv2
 import numpy as np
+from tkinter import colorchooser, Tk, Scale, Button, Canvas, Label, filedialog
+from PIL import Image, ImageTk
 
-# Khởi tạo biến ảnh
-image = None
-img_org = None
+class ImageRotator:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Xoay Ảnh")
 
-# Tạo cửa sổ gốc
-root = tk.Tk()
-root.title("Phần mềm Xử lý ảnh")
-root.geometry("800x500")
+        self.angle_label = Label(root, text="Góc xoay:")
+        self.angle_label.pack()
 
-# Tạo khung chứa các thành phần
-frame_left = tk.Frame(root)
-frame_right = tk.Frame(root)
-frame_left.pack(side="left", padx=10, pady=10)
-frame_right.pack(side="left", padx=10, pady=10)
+        self.angle_slider = Scale(root, from_=0, to=360, orient="horizontal", length=200, command=self.update_rotation)
+        self.angle_slider.pack()
 
-# Hàm mở tệp
-def open_file():
-    global image, label_org, img_org
-    file_path = filedialog.askopenfilename()
+        self.margin_color_button = Button(root, text="Chọn màu nền", command=self.choose_margin_color)
+        self.margin_color_button.pack()
 
-    if file_path:
-        # Kiểm tra phần mở rộng của tệp
-        if file_path.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp')):
-            # Tải ảnh gốc
-            img_org = Image.open(file_path)
-            img_org = img_org.resize((300, 350), Image.LANCZOS)
+        self.choose_image_button = Button(root, text="Chọn ảnh", command=self.choose_image)
+        self.choose_image_button.pack()
 
-            # Hiển thị ảnh gốc
-            photo = ImageTk.PhotoImage(img_org)
-            label_org.configure(image=photo)
-            label_org.image = photo
+        self.image_path = None
+        self.original_image = None
+        self.rotated_image = None
 
-            # Lưu ảnh gốc vào biến 'image'
-            image = np.array(img_org)
-            
-            # Hiển thị các chức năng chỉ sau khi thêm ảnh
-            scale_r.pack()
-            scale_g.pack()
-            scale_b.pack()
-            btn_gamma.pack()
-        else:
-            messagebox.showwarning("Lỗi", "Định dạng ảnh không được hỗ trợ.")
+        self.rotated_image_label = Label(root, text="Ảnh sau khi xoay:")
+        self.rotated_image_label.pack()
 
-# Hàm điều chỉnh gamma
-def adjust_gamma():
-    global image, label_adj
+        self.rotated_image_canvas = Canvas(root)
+        self.rotated_image_canvas.pack()
 
-    # Lấy giá trị từ thanh trượt
-    gamma_r = float(scale_r.get())
-    gamma_g = float(scale_g.get())
-    gamma_b = float(scale_b.get())
+        self.margin_color = (255, 255, 255)
 
-    # Tạo bản sao của ảnh gốc để điều chỉnh gamma
-    adjusted_image = np.copy(image)
+        self.update_rotation(0)
 
-    # Áp dụng chỉ số gamma cho từng kênh màu
-    adjusted_image[:, :, 0] = np.power(adjusted_image[:, :, 0] / 255.0, gamma_r) * 255.0
-    adjusted_image[:, :, 1] = np.power(adjusted_image[:, :, 1] / 255.0, gamma_g) * 255.0
-    adjusted_image[:, :, 2] = np.power(adjusted_image[:, :, 2] / 255.0, gamma_b) * 255.0
+    def rotate_image(self, angle, margin_color):
+        height, width = self.original_image.shape[:2]
+        image_center = (width / 2, height / 2)
 
-    # Chuyển đổi mảng numpy thành đối tượng Image
-    adjusted_image = Image.fromarray(adjusted_image.astype(np.uint8))
+        rotation_matrix = cv2.getRotationMatrix2D(image_center, angle, 1)
+        
+        abs_cos = abs(rotation_matrix[0,0])
+        abs_sin = abs(rotation_matrix[0,1])
 
-    # Hiển thị ảnh đã điều chỉnh gamma
-    photo = ImageTk.PhotoImage(adjusted_image)
-    label_adj.configure(image=photo)
-    label_adj.image = photo
+        bound_w = int(height * abs_sin + width * abs_cos)
+        bound_h = int(height * abs_cos + width * abs_sin)
 
-# Tạo các nhãn cho khung trái và khung phải
-label_org = tk.Label(frame_left)
-label_adj = tk.Label(frame_right)
+        rotation_matrix[0, 2] += bound_w/2 - image_center[0]
+        rotation_matrix[1, 2] += bound_h/2 - image_center[1]
 
-# Tạo thanh trượt cho hệ màu RGB
-scale_r = Scale(frame_right, from_=0, to=5, resolution=0.1, orient="horizontal", label="Gamma R", length=300)
-scale_g = Scale(frame_right, from_=0, to=5, resolution=0.1, orient="horizontal", label="Gamma G", length=300)
-scale_b = Scale(frame_right, from_=0, to=5, resolution=0.1, orient="horizontal", label="Gamma B", length=300)
+        rotated_image = cv2.warpAffine(self.original_image, rotation_matrix, (bound_w, bound_h), borderMode=cv2.BORDER_CONSTANT, borderValue=margin_color)
+        return rotated_image
 
-# Tạo nút để thực hiện chức năng điều chỉnh gamma
-btn_gamma = tk.Button(frame_right, text="Điều chỉnh gamma", command=adjust_gamma)
+    def choose_margin_color(self):
+        color = colorchooser.askcolor(title="Chọn màu nền")[0]
+        self.margin_color = tuple(map(int, color))
+        self.update_rotation(self.angle_slider.get())
 
-# Hiển thị khung ảnh trống ban đầu
-label_org.pack()
-frame_right.pack()
-label_adj.pack()
+    def choose_image(self):
+        file_path = filedialog.askopenfilename(title="Chọn ảnh", filetypes=[("Image files", "*.jpg;*.jpeg;*.png;*.gif")])
+        if file_path:
+            self.image_path = file_path
+            self.original_image = cv2.imread(file_path)
+            self.update_rotation(self.angle_slider.get())
 
-# Hiển thị các thành phần khi chọn thêm ảnh
-btn_open = tk.Button(frame_left, text="Mở ảnh", command=open_file)
-btn_open.pack()
+    def update_rotation(self, angle):
+        if self.original_image is not None:
+            angle = float(angle)
+            self.rotated_image = self.rotate_image(angle, self.margin_color)
+            self.display_rotated_image()
 
-# Chạy chương trình
-root.mainloop()
+    def display_rotated_image(self):
+        if self.rotated_image is not None:
+            rotated_image_rgb = cv2.cvtColor(self.rotated_image, cv2.COLOR_BGR2RGB)
+            pil_image = Image.fromarray(rotated_image_rgb)
+            imgtk = ImageTk.PhotoImage(image=pil_image)
+
+            self.rotated_image_canvas.config(width=imgtk.width(), height=imgtk.height())
+            self.rotated_image_canvas.create_image(0, 0, anchor="nw", image=imgtk)
+            self.rotated_image_canvas.image = imgtk
+
+if __name__ == "__main__":
+    root = Tk()
+    app = ImageRotator(root)
+    root.mainloop()
+
