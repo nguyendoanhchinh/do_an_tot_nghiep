@@ -1,88 +1,225 @@
-
 import cv2
-import numpy as np
-from tkinter import colorchooser, Tk, Scale, Button, Canvas, Label, filedialog
+import tkinter as tk
+from tkinter import filedialog
+import matplotlib.pyplot as plt
+from tkinter import Entry, StringVar, Scale,Tk, Label, Button, PhotoImage
 from PIL import Image, ImageTk
+from tkinter.filedialog import askopenfilename
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from tkinter import messagebox
+import numpy as np
+from tkinter import Scale
+from tkinter import Scrollbar
+from tkinter import colorchooser
+from math import sin, cos, radians
+image = img_org = brightness_scale = contrast_scale  = label_org = label_adj = save_button = original_label_width = original_label_height = radius_scale = focus_scale = None
+angle_slider = None
+rotated_image_canvas = None
+rotation_value = 0
+margin_color = (255, 255, 255) 
+def enable_save_button():
+    global save_button
+    if save_button and save_button.winfo_exists():
+        save_button.config(state="normal")
+def center_window(window, width, height):
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+    x = (screen_width - width) // 2
+    y = (screen_height - height) // 2
+    window.geometry(f"{width}x{height}+{x}+{y}")
+def open_file():
+    global image, label_org, img_org, original_label_width, original_label_height
+    file_path = filedialog.askopenfilename()
 
-class ImageRotator:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Xoay Ảnh")
+    if file_path:
+        if file_path.lower().endswith(
+            (".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp")
+        ):
+            img_org = Image.open(file_path)
 
-        self.angle_label = Label(root, text="Góc xoay:")
-        self.angle_label.pack()
+            original_label_width = label_org.winfo_width()
+            original_label_height = label_org.winfo_height()
+            img_org = resize_image_to_label(
+                img_org, original_label_width, original_label_height
+            )
 
-        self.angle_slider = Scale(root, from_=0, to=360, orient="horizontal", length=200, command=self.update_rotation)
-        self.angle_slider.pack()
+            update_label_size(label_org, original_label_width, original_label_height)
+            update_label_size(label_adj, original_label_width, original_label_height)
 
-        self.margin_color_button = Button(root, text="Chọn màu nền", command=self.choose_margin_color)
-        self.margin_color_button.pack()
+            display_image(img_org, label_org)
+            image = np.array(img_org)
+            enable_save_button()
+        else:
+            messagebox.showwarning("Lỗi", "Định dạng ảnh không được hỗ trợ.")
+def resize_image_to_label(img, label_width, label_height):
+    aspect_ratio = img.width / img.height  
+    new_width = min(img.width, label_width)  
+    new_height = int(new_width / aspect_ratio) 
+    if new_height > label_height:
+        new_height = label_height
+        new_width = int(new_height * aspect_ratio)
+    return img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
-        self.choose_image_button = Button(root, text="Chọn ảnh", command=self.choose_image)
-        self.choose_image_button.pack()
+def update_label_size(label, width, height):
+    label.config(width=width, height=height)
 
-        self.image_path = None
-        self.original_image = None
-        self.rotated_image = None
+def display_image(img, label):
+    photo = ImageTk.PhotoImage(img)
+    label.configure(image=photo)
+    label.image = photo
 
-        self.rotated_image_label = Label(root, text="Ảnh sau khi xoay:")
-        self.rotated_image_label.pack()
+def enable_save_button():
+    global save_button
+    if save_button is not None:
+        save_button.config(state="normal")
 
-        self.rotated_image_canvas = Canvas(root)
-        self.rotated_image_canvas.pack()
+def save_image():
+    global label_adj
+    if label_adj.image:
+        image_path = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[
+                ("PNG files", "*.png"),
+                ("JPEG files", "*.jpg"),
+                ("All files", "*.*"),
+            ],
+        )
+        if image_path:
+            adjusted_img = ImageTk.getimage(label_adj.image)
+            adjusted_img.save(image_path)
+            
+def adjust_brightness():
+    global img_org, brightness_scale, label_adj, save_button
+    destroy_previous_widgets()
+    if img_org is None:
+        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
+        return
+    brightness_scale = Scale(image_frame_right,from_=0,to=255,orient="horizontal",label="Độ sáng",showvalue=1,sliderlength=20,length=300,command=update_brightness,)
+    brightness_scale.pack()
+    save_button = tk.Button(
+        image_frame_right, text="Lưu", command=save_image, state="disabled")
+    save_button.pack()
+    update_brightness()
 
-        self.margin_color = (255, 255, 255)
+def update_brightness(*args):
+    global img_org, brightness_scale, label_adj
+    if img_org is None:
+        return
+    brightness_val = brightness_scale.get() / 100
+    adjusted_img = img_org.copy()
+    adjusted_img = adjusted_img.point(lambda p: p * brightness_val)
+    display_image(adjusted_img, label_adj)
+    enable_save_button()
 
-        self.update_rotation(0)
+def rotate_image():
+    global img_org, angle_slider, label_adj, rotated_image_canvas, angle_var, rotated_img, save_button
+    destroy_previous_widgets()
+    if img_org is None:
+        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
+        return
+    angle_var = StringVar()
+    angle_var.trace('w', lambda *args: update_rotation_from_entry(angle_var.get()))
+    angle_slider = Scale(image_frame_right, from_=0, to=360, orient="horizontal", label="Góc xoay", showvalue=0, sliderlength=20, length=300, command=update_rotation_from_slider)
+    angle_slider.pack()
+    angle_entry = Entry(image_frame_right, textvariable=angle_var)
+    angle_entry.pack()
+    save_button = tk.Button(image_frame_right, text="Lưu", command=lambda: save_image(rotated_img), state="disabled")
+    save_button.pack()
+    update_rotation_from_slider()
+def update_rotation_from_slider(*args):
+    global img_org, angle_slider, label_adj, angle_var, rotated_img, save_button
+    if img_org is None:
+        return
+    angle_val = angle_slider.get()
+    angle_var.set(str(angle_val)) 
+    rotated_img = rotate_and_display(angle_val)
+    enable_save_button()
+def rotate_and_display(angle_val):
+    global img_org, label_adj, image_frame_right, rotated_img, save_button
+    angle_rad = radians(float(angle_val))
+    width, height = img_org.size
+    new_width = abs(width * cos(angle_rad)) + abs(height * sin(angle_rad))
+    new_height = abs(width * sin(angle_rad)) + abs(height * cos(angle_rad))
 
-    def rotate_image(self, angle, margin_color):
-        height, width = self.original_image.shape[:2]
-        image_center = (width / 2, height / 2)
+    img_rgba = img_org.convert('RGBA')
 
-        rotation_matrix = cv2.getRotationMatrix2D(image_center, angle, 1)
+    rotated_img = img_rgba.rotate(float(angle_val), resample=Image.BICUBIC, expand=True)
+    background = Image.new('RGBA', rotated_img.size, (255, 255, 255, 255))  
+    final_img = Image.composite(rotated_img, background, rotated_img)
+
+    # Resize the rotated image to fit the original frame while maintaining aspect ratio
+    final_aspect_ratio = final_img.width / final_img.height
+    original_aspect_ratio = width / height
+
+    if final_aspect_ratio > original_aspect_ratio:
+        new_width = width
+        new_height = int(new_width / final_aspect_ratio)
+    else:
+        new_height = height
+        new_width = int(new_height * final_aspect_ratio)
+
+    final_img = final_img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+    display_image(final_img, label_adj)
+
+    save_button.config(state="normal") 
+    return final_img
+
+def update_rotation_from_entry(angle_val):
+    global img_org, angle_slider, label_adj, angle_var
+    if img_org is None:
+        return
+    try:
+        angle_val = max(0, min(360, float(angle_val)))
+    except ValueError:
+       
+     angle_val = 0
+    angle_var.set(str(angle_val))  
+    angle_slider.set(angle_val)  
+    rotate_and_display(angle_val)
+
+def destroy_previous_widgets():
+    global brightness_scale, contrast_scale, gamma_scale, save_button,radius_scale, focus_scale
+    if brightness_scale is not None:
+        brightness_scale.destroy()
+    if save_button is not None and save_button.winfo_exists():
+        save_button.destroy()
         
-        abs_cos = abs(rotation_matrix[0,0])
-        abs_sin = abs(rotation_matrix[0,1])
+root = tk.Tk()
+root.title("Phần mềm Xử lý ảnh")
+window_width = 1000
+window_height = 500
+center_window(root, window_width, window_height)
+header_label = tk.Label(root, text="Phần mềm Xử lý ảnh", font=("Helvetica", 14, "bold"), fg="red")
+header_label.pack(side="top", pady=10)
+def center_text(widget):
+    widget.update_idletasks()
+    x = (widget.winfo_width() - root.winfo_reqwidth()) // 2
+    root.geometry(f"+{x}+0")
+center_text(header_label)
+root.configure(bg="pink") 
+frame_left = tk.Frame(root, bd=2, relief=tk.SOLID)
+frame_right = tk.Frame(root, bd=2, relief=tk.SOLID)
+frame_left.pack(side="left", padx=20, pady=20)
+frame_right.pack(side="left", padx=20, pady=20)
+image_frame_left = tk.Frame(frame_left, bd=2, relief=tk.SOLID)
+image_frame_left.pack()
+image_frame_right = tk.Frame(frame_right, bd=2, relief=tk.SOLID)
+image_frame_right.pack()
+label_org = tk.Label(image_frame_left, width=65, height=250)
+label_adj = tk.Label(image_frame_right, width=75, height=350)
+label_org.pack()
+label_adj.pack()
 
-        bound_w = int(height * abs_sin + width * abs_cos)
-        bound_h = int(height * abs_cos + width * abs_sin)
-
-        rotation_matrix[0, 2] += bound_w/2 - image_center[0]
-        rotation_matrix[1, 2] += bound_h/2 - image_center[1]
-
-        rotated_image = cv2.warpAffine(self.original_image, rotation_matrix, (bound_w, bound_h), borderMode=cv2.BORDER_CONSTANT, borderValue=margin_color)
-        return rotated_image
-
-    def choose_margin_color(self):
-        color = colorchooser.askcolor(title="Chọn màu nền")[0]
-        self.margin_color = tuple(map(int, color))
-        self.update_rotation(self.angle_slider.get())
-
-    def choose_image(self):
-        file_path = filedialog.askopenfilename(title="Chọn ảnh", filetypes=[("Image files", "*.jpg;*.jpeg;*.png;*.gif")])
-        if file_path:
-            self.image_path = file_path
-            self.original_image = cv2.imread(file_path)
-            self.update_rotation(self.angle_slider.get())
-
-    def update_rotation(self, angle):
-        if self.original_image is not None:
-            angle = float(angle)
-            self.rotated_image = self.rotate_image(angle, self.margin_color)
-            self.display_rotated_image()
-
-    def display_rotated_image(self):
-        if self.rotated_image is not None:
-            rotated_image_rgb = cv2.cvtColor(self.rotated_image, cv2.COLOR_BGR2RGB)
-            pil_image = Image.fromarray(rotated_image_rgb)
-            imgtk = ImageTk.PhotoImage(image=pil_image)
-
-            self.rotated_image_canvas.config(width=imgtk.width(), height=imgtk.height())
-            self.rotated_image_canvas.create_image(0, 0, anchor="nw", image=imgtk)
-            self.rotated_image_canvas.image = imgtk
-
-if __name__ == "__main__":
-    root = Tk()
-    app = ImageRotator(root)
-    root.mainloop()
-
+menu_bar = tk.Menu(root)
+root.config(menu=menu_bar)
+file_menu = tk.Menu(menu_bar)
+file_menu.add_command(label="Mở", command=open_file)
+file_menu.add_separator()
+file_menu.add_command(label="Thoát", command=root.destroy)
+menu_bar.add_cascade(label="Tệp", menu=file_menu)
+edit_menu = tk.Menu(menu_bar)
+edit_menu.add_command(label="Điều chỉnh độ sáng ", command=adjust_brightness)
+edit_menu.add_command(label="Xoay ảnh", command=rotate_image)
+menu_bar.add_cascade(label="Chỉnh sửa", menu=edit_menu)
+root.mainloop()

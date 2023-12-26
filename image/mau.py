@@ -1,97 +1,149 @@
 import cv2
-import numpy as np
 import tkinter as tk
-from tkinter import colorchooser
 from tkinter import filedialog
+import matplotlib.pyplot as plt
+from tkinter import Entry, StringVar, Scale,Tk, Label, Button, PhotoImage
 from PIL import Image, ImageTk
+from tkinter.filedialog import askopenfilename
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from tkinter import messagebox
+import numpy as np
+from tkinter import Scale
+from tkinter import Scrollbar
+from tkinter import colorchooser
+from math import sin, cos, radians
+image = img_org = brightness_scale = contrast_scale = gamma_scale = label_org = label_adj = save_button = original_label_width = original_label_height = radius_scale = focus_scale = None
 
-def color_adjustment(image, object_color, target_color):
-    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    
-    # Chuyển đổi màu từ (R, G, B) sang (H, S, V)
-    lower_bound = np.array(object_color[0:3])
-    upper_bound = np.array(object_color[3:6])
-
-    # Mở rộng chiều dài của lower_bound và upper_bound để khớp với chiều dài của hsv_image
-    lower_bound = lower_bound.reshape(1, 1, 3)
-    upper_bound = upper_bound.reshape(1, 1, 3)
-
-    object_mask = cv2.inRange(hsv_image, lower_bound, upper_bound)
-    hsv_image[np.where(object_mask)] = target_color
-
-    result_image = cv2.cvtColor(hsv_image, cv2.COLOR_HSV2BGR)
-    return result_image
-
-class ColorAdjustmentApp:
-    def __init__(self, root, image_path):
-        self.root = root
-        self.root.title("Color Adjustment App")
-
-        # Đọc ảnh
-        self.input_image = cv2.imread(image_path)
-
-        # Khởi tạo object_color và target_color
-        self.object_color = [0, 0, 0, 0, 0, 0]
-        self.target_color = [0, 0, 0]
-
-        # Hiển thị ảnh gốc
-        self.display_original_image()
-
-        # Button để chọn vật thể và màu sắc
-        select_button = tk.Button(root, text="Select Object Color", command=self.select_object_color)
-        select_button.pack()
-
-        # Button để chọn màu sắc mong muốn
-        choose_color_button = tk.Button(root, text="Choose Target Color", command=self.choose_target_color)
-        choose_color_button.pack()
-
-        # Button để thực hiện chỉnh sửa màu sắc
-        adjust_button = tk.Button(root, text="Adjust Color", command=self.adjust_color)
-        adjust_button.pack()
-
-    def display_original_image(self):
-        # Chuyển đổi ảnh OpenCV sang định dạng hỗ trợ bởi Tkinter
-        original_image = cv2.cvtColor(self.input_image, cv2.COLOR_BGR2RGB)
-        original_image = Image.fromarray(original_image)
-        original_image = ImageTk.PhotoImage(original_image)
-
-        # Hiển thị ảnh gốc
-        label = tk.Label(root, image=original_image)
-        label.image = original_image
-        label.pack()
-
-    def select_object_color(self):
-        color = colorchooser.askcolor(title="Select Object Color")
-        # Lưu trữ màu được chọn trong biến instance để sử dụng sau này
-        self.object_color = [int(i) for i in color[0]]
-
-    def choose_target_color(self):
-        color = colorchooser.askcolor(title="Choose Target Color")
-        # Lưu trữ màu được chọn trong biến instance để sử dụng sau này
-        self.target_color = [int(i) for i in color[0]]
-
-    def adjust_color(self):
-        # Thực hiện chỉnh sửa màu sắc
-        output_image = color_adjustment(self.input_image, self.object_color, self.target_color)
-
-        # Hiển thị ảnh sau khi chỉnh sửa
-        adjusted_image = cv2.cvtColor(output_image, cv2.COLOR_BGR2RGB)
-        adjusted_image = Image.fromarray(adjusted_image)
-        adjusted_image = ImageTk.PhotoImage(adjusted_image)
-
-        # Hiển thị ảnh đã chỉnh sửa, xóa ảnh gốc
-        for widget in self.root.winfo_children():
-            widget.destroy()
-
-        label = tk.Label(self.root, image=adjusted_image)
-        label.image = adjusted_image
-        label.pack()
-
-if __name__ == "__main__":
-    root = tk.Tk()
-
-    # Mở hộp thoại để chọn ảnh
+def enable_save_button():
+    global save_button
+    if save_button and save_button.winfo_exists():
+        save_button.config(state="normal")
+def center_window(window, width, height):
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+    x = (screen_width - width) // 2
+    y = (screen_height - height) // 2
+    window.geometry(f"{width}x{height}+{x}+{y}")
+def open_file():
+    global image, label_org, img_org, original_label_width, original_label_height
     file_path = filedialog.askopenfilename()
-    app = ColorAdjustmentApp(root, file_path)
+    if file_path:
+        if file_path.lower().endswith(
+            (".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp")
+        ):
+            img_org = Image.open(file_path)
+            original_label_width = label_org.winfo_width()
+            original_label_height = label_org.winfo_height()
+            img_org = resize_image_to_label(
+                img_org, original_label_width, original_label_height
+            )
 
-    root.mainloop()
+            update_label_size(label_org, original_label_width, original_label_height)
+            update_label_size(label_adj, original_label_width, original_label_height)
+
+            display_image(img_org, label_org)
+            image = np.array(img_org)
+            enable_save_button()
+        else:
+            messagebox.showwarning("Lỗi", "Định dạng ảnh không được hỗ trợ.")
+def resize_image_to_label(img, label_width, label_height):
+    aspect_ratio = img.width / img.height  
+    new_width = min(img.width, label_width) 
+    new_height = int(new_width / aspect_ratio)  
+    if new_height > label_height:
+        new_height = label_height
+        new_width = int(new_height * aspect_ratio)
+    return img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+def update_label_size(label, width, height):
+    label.config(width=width, height=height)
+def display_image(img, label):
+    photo = ImageTk.PhotoImage(img)
+    label.configure(image=photo)
+    label.image = photo
+# chức năng lưu ảnh
+def enable_save_button():
+    global save_button
+    if save_button is not None:
+        save_button.config(state="normal")
+def save_image():
+    global label_adj
+    if label_adj.image:
+        image_path = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[
+                ("PNG files", "*.png"),
+                ("JPEG files", "*.jpg"),
+                ("All files", "*.*"),
+            ],
+        )
+        if image_path:
+            adjusted_img = ImageTk.getimage(label_adj.image)
+            adjusted_img.save(image_path)
+def adjust_brightness():
+    global img_org, brightness_scale, label_adj, save_button
+    destroy_previous_widgets()
+    if img_org is None:
+        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
+        return
+    brightness_scale = Scale(image_frame_right,from_=0,to=255,orient="horizontal",label="Độ sáng",showvalue=1,sliderlength=20,length=300,command=update_brightness,)
+    brightness_scale.pack()
+    save_button = tk.Button(
+        image_frame_right, text="Lưu", command=save_image, state="disabled")
+    save_button.pack()
+    update_brightness()
+root = tk.Tk()
+root.title("Phần mềm Xử lý ảnh")
+window_width = 1000
+window_height = 500
+center_window(root, window_width, window_height)
+header_label = tk.Label(root, text="Phần mềm Xử lý ảnh", font=("Helvetica", 14, "bold"), fg="red")
+header_label.pack(side="top", pady=10)
+def center_text(widget):
+    widget.update_idletasks()
+    x = (widget.winfo_width() - root.winfo_reqwidth()) // 2
+    root.geometry(f"+{x}+0")
+center_text(header_label)
+root.configure(bg="pink") 
+frame_left = tk.Frame(root, bd=2, relief=tk.SOLID)
+frame_right = tk.Frame(root, bd=2, relief=tk.SOLID)
+frame_left.pack(side="left", padx=20, pady=20)
+frame_right.pack(side="left", padx=20, pady=20)
+image_frame_left = tk.Frame(frame_left, bd=2, relief=tk.SOLID)
+image_frame_left.pack()
+
+# Tạo một Canvas với kích thước cố định để chứa label_adj và thanh trượt
+canvas = tk.Canvas(frame_right, width=65, height=250)
+canvas.pack(side="left")
+
+# Thêm thanh trượt vào Canvas
+scrollbar = Scrollbar(frame_right, command=canvas.yview)
+scrollbar.pack(side="left", fill="y")
+
+# Cấu hình Canvas để sử dụng thanh trượt
+canvas.configure(yscrollcommand=scrollbar.set)
+canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+# Tạo một khung để chứa label_adj
+frame_adj = tk.Frame(canvas)
+
+# Thêm khung vào Canvas
+canvas.create_window((0,0), window=frame_adj, anchor="nw")
+
+# Tạo label_adj trong khung
+label_adj = tk.Label(frame_adj, width=65, height=250)
+label_adj.pack()
+
+menu_bar = tk.Menu(root)
+root.config(menu=menu_bar)
+
+file_menu = tk.Menu(menu_bar)
+file_menu.add_command(label="Mở", command=open_file)
+file_menu.add_separator()
+file_menu.add_command(label="Thoát", command=root.destroy)
+menu_bar.add_cascade(label="Tệp", menu=file_menu)
+edit_menu = tk.Menu(menu_bar)
+edit_menu.add_command(label="Điều chỉnh độ sáng ", command=adjust_brightness)
+menu_bar.add_cascade(label="Chỉnh sửa", menu=edit_menu)
+
+root.mainloop()

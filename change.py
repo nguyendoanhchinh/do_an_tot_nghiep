@@ -3,7 +3,7 @@ import cv2
 import tkinter as tk
 from tkinter import filedialog
 import matplotlib.pyplot as plt
-from tkinter import Tk, Label, Button, PhotoImage
+from tkinter import Entry, StringVar, Scale,Tk, Label, Button, PhotoImage
 from PIL import Image, ImageTk
 from tkinter.filedialog import askopenfilename
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -12,7 +12,7 @@ import numpy as np
 from tkinter import Scale
 from tkinter import Scrollbar
 from tkinter import colorchooser
-
+from math import sin, cos, radians
 # Khởi tạo biến ảnh
 image = img_org = brightness_scale = contrast_scale = gamma_scale = label_org = label_adj = save_button = original_label_width = original_label_height = radius_scale = focus_scale = None
 value = 1
@@ -20,66 +20,55 @@ radius = 360
 angle_slider = None
 rotated_image_canvas = None
 rotation_value = 0
-margin_color = (255, 255, 255) 
+margin_color = (255, 255, 255)
+# Hàm này sẽ kích hoạt nút lưu
 def enable_save_button():
     global save_button
-    if save_button:
+    if save_button and save_button.winfo_exists():
         save_button.config(state="normal")
-# hiển thị giao diện chính giữa màn hình
+# Hàm này sẽ đặt cửa sổ ở giữa màn hình
 def center_window(window, width, height):
     screen_width = window.winfo_screenwidth()
     screen_height = window.winfo_screenheight()
     x = (screen_width - width) // 2
     y = (screen_height - height) // 2
     window.geometry(f"{width}x{height}+{x}+{y}")
-
-
-# Hàm mở tệp
+# Hàm này sẽ mở tệp ảnh
 def open_file():
     global image, label_org, img_org, original_label_width, original_label_height
-
     file_path = filedialog.askopenfilename()
-
     if file_path:
         if file_path.lower().endswith(
             (".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp")
         ):
             img_org = Image.open(file_path)
-
             original_label_width = label_org.winfo_width()
             original_label_height = label_org.winfo_height()
-
-            # Tính toán kích thước mới của ảnh để vừa vào nhãn
             img_org = resize_image_to_label(
                 img_org, original_label_width, original_label_height
             )
-
             update_label_size(label_org, original_label_width, original_label_height)
             update_label_size(label_adj, original_label_width, original_label_height)
-
             display_image(img_org, label_org)
             image = np.array(img_org)
             enable_save_button()
         else:
             messagebox.showwarning("Lỗi", "Định dạng ảnh không được hỗ trợ.")
-
-
-# điều chỉnh kích thước ảnh  trong khung
+# Hàm này sẽ thay đổi kích thước ảnh để phù hợp với khung nhãn
 def resize_image_to_label(img, label_width, label_height):
-    aspect_ratio = img.width / img.height  # tính tỷ lệ kích thước khung
-    new_width = min(img.width, label_width)  # chiều rộng của khung
-    new_height = int(new_width / aspect_ratio)  # chiều cao của khung
-    # Nếu chiều cao mới lớn hơn chiều cao của nhãn, thì thu nhỏ ảnh
+    aspect_ratio = img.width / img.height
+    new_width = min(img.width, label_width)
+    new_height = int(new_width / aspect_ratio)
     if new_height > label_height:
         new_height = label_height
         new_width = int(new_height * aspect_ratio)
     return img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
+# Hàm này sẽ cập nhật kích thước của khung nhãn
 def update_label_size(label, width, height):
     label.config(width=width, height=height)
 
-
-# Hàm hiển thị ảnh trong label
+# Hàm này sẽ hiển thị ảnh trên khung nhãn
 def display_image(img, label):
     photo = ImageTk.PhotoImage(img)
     label.configure(image=photo)
@@ -89,7 +78,6 @@ def enable_save_button():
     global save_button
     if save_button is not None:
         save_button.config(state="normal")
-
 def save_image():
     global label_adj
     if label_adj.image:
@@ -105,7 +93,6 @@ def save_image():
             adjusted_img = ImageTk.getimage(label_adj.image)
             adjusted_img.save(image_path)
 
-
 # Hàm điều chỉnh độ sáng
 def adjust_brightness():
     global img_org, brightness_scale, label_adj, save_button
@@ -115,7 +102,7 @@ def adjust_brightness():
         messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
     # Tạo thanh điều chỉnh độ sáng
-    brightness_scale = Scale(image_frame_right,from_=0,to=255,orient="horizontal",label="Độ sáng",showvalue=1,sliderlength=20,length=300,command=update_brightness,)
+    brightness_scale = Scale(image_frame_right,from_=-255,to=255,orient="horizontal",label="Độ sáng",showvalue=1,sliderlength=20,length=300,command=update_brightness,)
     brightness_scale.pack()
     # Tạo nút "Lưu"
     save_button = tk.Button(
@@ -123,42 +110,28 @@ def adjust_brightness():
     save_button.pack()
     # Gọi hàm cập nhật ảnh đã điều chỉnh
     update_brightness()
-
-
 # Hàm cập nhật ảnh đã điều chỉnh cho độ sáng
 def update_brightness(*args):
     global img_org, brightness_scale, label_adj
     if img_org is None:
         return
-    brightness_val = brightness_scale.get() / 100
+    # Lấy giá trị từ thanh trượt và giới hạn nó trong khoảng [-255, 255]
+    brightness_val = max(-255, min(round(brightness_scale.get()), 255))
     adjusted_img = img_org.copy()
-    # Điều chỉnh độ sáng
-    adjusted_img = adjusted_img.point(lambda p: p * brightness_val)
-    # Hiển thị ảnh đã điều chỉnh
+    adjusted_img = adjusted_img.point(lambda p: p + brightness_val)
     display_image(adjusted_img, label_adj)
     enable_save_button()
 
-
 # Hàm điều chỉnh độ tương phản
-def adjust_contrast():
-    global img_org, contrast_scale, label_adj, save_button
+def truncate(value):
+    return max(0, min(255, value))
 
-    # Kiểm tra nếu có widgets của chức năng trước đó, thì hủy bỏ chúng
-    destroy_previous_widgets()
-    if img_org is None:
-        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
-        return
-    # Tạo thanh điều chỉnh độ tương phản
-    contrast_scale = Scale(image_frame_right,from_=0.1,to=3.0,orient="horizontal",label="Độ tương phản",resolution=0.1,showvalue=1,sliderlength=20,length=300,command=update_contrast,)
-    contrast_scale.pack()
-    # Tạo nút "Lưu"
-    save_button = tk.Button(
-        image_frame_right, text="Lưu", command=save_image, state="disabled"
-    )
-    save_button.pack()
-    # Gọi hàm cập nhật ảnh đã điều chỉnh
-    update_contrast()
-# Hàm cập nhật ảnh đã điều chỉnh cho độ tương phản
+def adjust_value(value, contrast_val):
+    if contrast_val > 0:
+        return truncate(int((value - 128) * (contrast_val + 1) + 128))
+    else:
+        return truncate(int(value / (abs(contrast_val) + 1)))
+
 def update_contrast(*args):
     global img_org, contrast_scale, label_adj
 
@@ -171,14 +144,75 @@ def update_contrast(*args):
     for x in range(adjusted_img.width):
         for y in range(adjusted_img.height):
             r, g, b = adjusted_img.getpixel((x, y))
-            new_r = int((r - 128) * contrast_val + 128)
-            new_g = int((g - 128) * contrast_val + 128)
-            new_b = int((b - 128) * contrast_val + 128)
+            new_r = adjust_value(r, contrast_val)
+            new_g = adjust_value(g, contrast_val)
+            new_b = adjust_value(b, contrast_val)
             adjusted_img.putpixel((x, y), (new_r, new_g, new_b))
     # Hiển thị ảnh đã điều chỉnh
     display_image(adjusted_img, label_adj)
     enable_save_button()
 
+def adjust_contrast():
+    global img_org, contrast_scale, label_adj, save_button
+
+    # Kiểm tra nếu có widgets của chức năng trước đó, thì hủy bỏ chúng
+    destroy_previous_widgets()
+    if img_org is None:
+        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
+        return
+    # Tạo thanh điều chỉnh độ tương phản
+    contrast_scale = Scale(image_frame_right,from_=-3,to=3.0,orient="horizontal",label="Độ tương phản",resolution=0.1,showvalue=1,sliderlength=20,length=300,command=update_contrast,)
+    contrast_scale.pack()
+    # Tạo nút "Lưu"
+    save_button = tk.Button(
+        image_frame_right, text="Lưu", command=save_image, state="disabled"
+    )
+    save_button.pack()
+    # Gọi hàm cập nhật ảnh đã điều chỉnh
+    update_contrast()
+def adjust_brightness_contrast():
+    global img_org, brightness_scale, contrast_scale, label_adj, save_button
+
+    # Kiểm tra nếu có widgets của chức năng trước đó, thì hủy bỏ chúng
+    destroy_previous_widgets()
+    if img_org is None:
+        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
+        return
+    # Tạo thanh điều chỉnh độ sáng
+    brightness_scale = Scale(image_frame_right,from_=-255,to=255,orient="horizontal",label="Độ sáng",showvalue=1,sliderlength=20,length=300,command=update_brightness_contrast,)
+    brightness_scale.pack()
+    # Tạo thanh điều chỉnh độ tương phản
+    contrast_scale = Scale(image_frame_right,from_=-3,to=3.0,orient="horizontal",label="Độ tương phản",resolution=0.1,showvalue=1,sliderlength=20,length=300,command=update_brightness_contrast,)
+    contrast_scale.pack()
+    # Tạo nút "Lưu"
+    save_button = tk.Button(
+        image_frame_right, text="Lưu", command=save_image, state="disabled"
+    )
+    save_button.pack()
+    # Gọi hàm cập nhật ảnh đã điều chỉnh
+    update_brightness_contrast()
+
+def update_brightness_contrast(*args):
+    global img_org, brightness_scale, contrast_scale, label_adj
+    if img_org is None:
+        return
+    # Lấy giá trị từ thanh trượt và giới hạn nó trong khoảng [-255, 255]
+    brightness_val = max(-255, min(round(brightness_scale.get()), 255))
+    contrast_val = contrast_scale.get()
+    adjusted_img = img_org.copy()
+    # Điều chỉnh độ sáng
+    adjusted_img = adjusted_img.point(lambda p: p + brightness_val)
+    # Điều chỉnh độ tương phản
+    for x in range(adjusted_img.width):
+        for y in range(adjusted_img.height):
+            r, g, b = adjusted_img.getpixel((x, y))
+            new_r = adjust_value(r, contrast_val)
+            new_g = adjust_value(g, contrast_val)
+            new_b = adjust_value(b, contrast_val)
+            adjusted_img.putpixel((x, y), (new_r, new_g, new_b))
+    # Hiển thị ảnh đã điều chỉnh
+    display_image(adjusted_img, label_adj)
+    enable_save_button()
 
 # Hàm điều chỉnh gamma
 def adjust_gamma():
@@ -217,10 +251,54 @@ def update_gamma(*args):
     enable_save_button()
 
 
-# Hàm điều làm sắc nét ảnh
-def adjust_sharpe():
-    return true
+# Hàm điều chỉnh độ tương phản
+def truncate(value):
+    return max(0, min(255, value))
 
+def adjust_value(value, contrast_val):
+    if contrast_val > 0:
+        return truncate(int((value - 128) * (contrast_val + 1) + 128))
+    else:
+        return truncate(int(value / (abs(contrast_val) + 1)))
+
+def update_contrast(*args):
+    global img_org, contrast_scale, label_adj
+
+    if img_org is None:
+        return
+    contrast_val = contrast_scale.get()
+    adjusted_img = img_org.copy()
+
+    # Điều chỉnh độ tương phản
+    for x in range(adjusted_img.width):
+        for y in range(adjusted_img.height):
+            r, g, b = adjusted_img.getpixel((x, y))
+            new_r = adjust_value(r, contrast_val)
+            new_g = adjust_value(g, contrast_val)
+            new_b = adjust_value(b, contrast_val)
+            adjusted_img.putpixel((x, y), (new_r, new_g, new_b))
+    # Hiển thị ảnh đã điều chỉnh
+    display_image(adjusted_img, label_adj)
+    enable_save_button()
+
+def adjust_contrast():
+    global img_org, contrast_scale, label_adj, save_button
+
+    # Kiểm tra nếu có widgets của chức năng trước đó, thì hủy bỏ chúng
+    destroy_previous_widgets()
+    if img_org is None:
+        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
+        return
+    # Tạo thanh điều chỉnh độ tương phản
+    contrast_scale = Scale(image_frame_right,from_=-3,to=3.0,orient="horizontal",label="Độ tương phản",resolution=0.1,showvalue=1,sliderlength=20,length=300,command=update_contrast,)
+    contrast_scale.pack()
+    # Tạo nút "Lưu"
+    save_button = tk.Button(
+        image_frame_right, text="Lưu", command=save_image, state="disabled"
+    )
+    save_button.pack()
+    # Gọi hàm cập nhật ảnh đã điều chỉnh
+    update_contrast()
 
 # Hàm cân bằng hình ảnh
 
@@ -229,25 +307,25 @@ def equalize_image():
 
     # Kiểm tra nếu có widgets của chức năng trước đó, thì hủy bỏ chúng
     destroy_previous_widgets()
-
     if img_org is None:
         messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
-
     # Chuyển đổi ảnh từ PIL Image sang NumPy array
     img_array = np.array(img_org)
-
     # Chuyển đổi định dạng màu từ RGB sang HSV
     img_hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
-
     # Tách các kênh màu
     h, s, v = cv2.split(img_hsv)
-
-    # Áp dụng equalizeHist cho kênh độ sáng (Value)
-    v_equalized = cv2.equalizeHist(v)
-
+    # Bước 1: Thống kê số lượng pixel cho từng mức sáng
+    hist, bins = np.histogram(v.flatten(), 256, [0, 256])
+    # Bước 2: Tính hàm tích lũy Z
+    cdf = hist.cumsum()
+    # Bước 3: Tính hàm biến đổi K(i)
+    k_transform = (cdf - cdf.min()) / (cdf.max() - cdf.min()) * 255
+    # Áp dụng hàm biến đổi K(i) cho kênh độ sáng (Value)
+    v_equalized = k_transform[v.astype(np.uint8)]  # Chuyển đổi về kiểu uint8
     # Gộp các kênh màu lại
-    img_hsv_equalized = cv2.merge([h, s, v_equalized])
+    img_hsv_equalized = cv2.merge([h, s, v_equalized.astype(np.uint8)])
 
     # Chuyển đổi định dạng màu từ HSV sang RGB
     img_equalized = cv2.cvtColor(img_hsv_equalized, cv2.COLOR_HSV2RGB)
@@ -256,23 +334,24 @@ def equalize_image():
     adjusted_img = Image.fromarray(img_equalized)
     display_image(adjusted_img, label_adj)
     enable_save_button()
-      # Cập nhật hàm lưu ảnh
-    save_button = tk.Button(
-        image_frame_right, text="Lưu", command=save_image, state="normal"
-    )
-    save_button.pack()
 
+      # Tạo nút "Lưu" nếu chưa tồn tại
+    if not save_button or not save_button.winfo_exists():
+        save_button = tk.Button(
+            image_frame_right, text="Lưu", command=save_image, state="normal"
+        )
+        save_button.pack()
+    else:
+        save_button.config(state="normal")
 # Hiệu ứng họa tiết
 def apply_vignette(radius, focus):
     global img_org, label_adj, save_button
 
     # Kiểm tra nếu có widgets của chức năng trước đó, thì hủy bỏ chúng
     destroy_previous_widgets()
-
     if img_org is None:
         messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
-
     # Tính toán kích thước mới của ảnh để vừa vào nhãn
     img_resized = resize_image_to_label(
         img_org, label_adj.winfo_width(), label_adj.winfo_height())
@@ -293,11 +372,9 @@ def apply_vignette(radius, focus):
     # Hiển thị ảnh đã điều chỉnh
     display_image(result_image, label_adj)
     enable_save_button()
-
 #Hiệu ứng làm mờ cạnh
 def vignette_effect():
     global img_org, label_adj, save_button, radius_scale, focus_scale, value, radius
-
     if img_org is None:
         messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
@@ -338,58 +415,120 @@ def update_vignette(*args):
     adjusted_img = Image.fromarray(cv2.cvtColor(output, cv2.COLOR_BGR2RGB))
     display_image(adjusted_img, label_adj)
     enable_save_button()
-#Xoay ảnh
 
+# Hàm để xoay hình ảnh
 def rotate_image():
-    global img_org, rotated_image_canvas, angle_slider, rotation_value, margin_color, color_button
+    # Khai báo các biến toàn cục sẽ được sử dụng trong hàm
+    global img_org, angle_slider, label_adj, rotated_image_canvas, angle_var, rotated_img, save_button
 
+    # Hủy các widget trước đó (nếu có)
     destroy_previous_widgets()
-
+    # Kiểm tra xem có hình ảnh nào được mở chưa
     if img_org is None:
-        tk.messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
+        # Nếu không, hiển thị thông báo lỗi và thoát khỏi hàm
+        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
+    # Tạo một biến StringVar để theo dõi giá trị góc xoay
+    angle_var = StringVar()
+    # Cập nhật giá trị góc xoay khi biến angle_var thay đổi
+    angle_var.trace('w', lambda *args: update_rotation_from_entry(angle_var.get()))
 
-    color_button = tk.Button(root, text="Chọn màu nền", command=change_background_color)
-    color_button.pack()
-
-    angle_slider = Scale(root, from_=0, to=360, orient="horizontal", length=200, command=update_rotation)
+    # Tạo một thanh trượt để điều chỉnh góc xoay
+    angle_slider = Scale(image_frame_right, from_=0, to=360, orient="horizontal", label="Góc xoay", showvalue=0, sliderlength=20, length=300, command=update_rotation_from_slider)
     angle_slider.pack()
+    # Tạo một hộp nhập liệu để nhập góc xoay
+    angle_entry = Entry(image_frame_right, textvariable=angle_var)
+    angle_entry.pack()
+    # Tạo một nút để lưu hình ảnh đã xoay
+    save_button = tk.Button( image_frame_right, text="Lưu",  command=save_image,state="disabled")
+    save_button.pack()
+    # Tạo một nút để chọn màu nền
+    color_button = tk.Button(image_frame_right, text="Chọn màu nền", command=choose_color)
+    color_button.pack()
+    # Cập nhật hình ảnh xoay
+    update_rotation_from_slider()
 
-    update_rotation()
+# Hàm để chọn màu nền
+def choose_color():
+    global margin_color, angle_slider
+    # Hiển thị hộp thoại chọn màu
+    color_code = colorchooser.askcolor(title ="Chọn màu")
+    # Kiểm tra xem người dùng có chọn màu không
+    if color_code[0] is None:  # Người dùng đã hủy bỏ hộp thoại chọn màu
+        return
+    # Chuyển đổi màu đã chọn thành bộ giá trị RGB
+    margin_color = tuple(int(color_code[0][i]) for i in range(3))  # Convert to RGB tuple
+    # Cập nhật hình ảnh xoay với màu nền mới
+    rotate_and_display(angle_slider.get())
 
-def change_background_color():
-    global margin_color, color_button
-    color = colorchooser.askcolor(title="Chọn màu nền")[0]
-    margin_color = tuple(map(int, color))
-    color_button.configure(bg=rgb_to_hex(margin_color))
+# Hàm để cập nhật góc xoay từ thanh trượt
+def update_rotation_from_slider(*args):
+    global img_org, angle_slider, label_adj, angle_var, rotated_img, save_button
+    # Kiểm tra xem có hình ảnh nào được mở chưa
+    if img_org is None:
+        return
+    # Lấy giá trị góc xoay từ thanh trượt
+    angle_val = angle_slider.get()
+    # Cập nhật giá trị góc xoay trong hộp nhập liệu
+    angle_var.set(str(angle_val)) 
+    # Xoay hình ảnh và hiển thị nó
+    rotated_img = rotate_and_display(angle_val)
+    # Kích hoạt nút lưu
+    enable_save_button()
 
-def rgb_to_hex(rgb):
-    return f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
+# Hàm để xoay và hiển thị hình ảnh
+def rotate_and_display(angle_val):
+    global img_org, label_adj, image_frame_right, rotated_img, save_button, margin_color
+    # Chuyển đổi góc xoay từ độ sang radian
+    angle_rad = radians(float(angle_val))
+    # Tính toán kích thước mới của hình ảnh sau khi xoay
+    width, height = img_org.size
+    new_width = abs(width * cos(angle_rad)) + abs(height * sin(angle_rad))
+    new_height = abs(width * sin(angle_rad)) + abs(height * cos(angle_rad))
 
-def update_rotation(*args):
-    global img_org, rotated_image_canvas, angle_slider, rotation_value, margin_color
+    # Chuyển hình ảnh gốc sang định dạng RGBA
+    img_rgba = img_org.convert('RGBA')
 
-    if img_org is not None:
-        rotation_value = angle_slider.get()
-        rotated_img = rotate_image_by_angle(img_org, rotation_value, margin_color)
-        display_image(rotated_img, rotated_image_canvas)
+    # Xoay hình ảnh
+    rotated_img = img_rgba.rotate(float(angle_val), resample=Image.BICUBIC, expand=True)
+    # Tạo một hình ảnh nền mới với màu đã chọn
+    background = Image.new('RGBA', rotated_img.size, margin_color + (255,))  
+    # Ghép hình ảnh xoay và hình ảnh nền
+    final_img = Image.alpha_composite(background, rotated_img)
+    # Thay đổi kích thước hình ảnh xoay để phù hợp với khung gốc trong khi duy trì tỷ lệ khung hình
+    final_aspect_ratio = final_img.width / final_img.height
+    original_aspect_ratio = width / height
+    if final_aspect_ratio > original_aspect_ratio:
+        new_width = width
+        new_height = int(new_width / final_aspect_ratio)
+    else:
+        new_height = height
+        new_width = int(new_height * final_aspect_ratio)
+    # Thay đổi kích thước hình ảnh xoay
+    final_img = final_img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    # Hiển thị hình ảnh xoay
+    display_image(final_img, label_adj)
+    # Kích hoạt nút lưu
+    save_button.config(state="normal") 
+    return final_img
 
-def rotate_image_by_angle(image, angle, margin_color):
-    if image is not None:
-        img_array = np.array(image)
-        height, width = img_array.shape[:2]
-        image_center = (width / 2, height / 2)
-        rotation_matrix = cv2.getRotationMatrix2D(image_center, angle, 1)
-        abs_cos = abs(rotation_matrix[0, 0])
-        abs_sin = abs(rotation_matrix[0, 1])
-        bound_w = int(height * abs_sin + width * abs_cos)
-        bound_h = int(height * abs_cos + width * abs_sin)
-        rotation_matrix[0, 2] += bound_w / 2 - image_center[0]
-        rotation_matrix[1, 2] += bound_h / 2 - image_center[1]
-        rotated_image = cv2.warpAffine(img_array, rotation_matrix, (bound_w, bound_h), borderMode=cv2.BORDER_CONSTANT, borderValue=margin_color)
-        rotated_image_pil = Image.fromarray(rotated_image)
-        return rotated_image_pil
-# Hủy bỏ các widgets của chức năng trước đó
+# Hàm để cập nhật góc xoay từ hộp nhập liệu
+def update_rotation_from_entry(angle_val):
+    global img_org, angle_slider, label_adj, angle_var
+    # Kiểm tra xem có hình ảnh nào được mở chưa
+    if img_org is None:
+        return
+    try:
+        # Chuyển đổi giá trị góc xoay từ chuỗi sang số thực
+        angle_val = max(0, min(360, float(angle_val)))
+    except ValueError:
+        # Nếu không thể chuyển đổi, đặt giá trị góc xoay thành 0
+        angle_val = 0
+    # Cập nhật giá trị góc xoay trong hộp nhập liệu và thanh trượt
+    angle_var.set(str(angle_val))  
+    angle_slider.set(angle_val)  
+    # Xoay hình ảnh và hiển thị nó
+    rotate_and_display(angle_val)
 def destroy_previous_widgets():
     global brightness_scale, contrast_scale, gamma_scale, save_button,radius_scale, focus_scale
 
@@ -406,38 +545,55 @@ def destroy_previous_widgets():
     # Check if save_button exists before destroying
     if save_button is not None and save_button.winfo_exists():
         save_button.destroy()
+def on_mousewheel(event):
+    canvas_right.yview_scroll(int(-1*(event.delta/120)), "units")
+    canvas_left.yview_scroll(int(-1*(event.delta/120)), "units")
+
+    canvas_right.bind_all("<MouseWheel>", on_mousewheel)
+    canvas_left.bind_all("<MouseWheel>", on_mousewheel)
+
 
 # Tạo cửa sổ gốc
 root = tk.Tk()
-root.title("Phần mềm Xử lý ảnh")
-window_width = 1000
-window_height = 500
-center_window(root, window_width, window_height)
+root.title("Phần mềm Xử lý ánh sáng ảnh")
+root.state('zoomed')  # Mở ở chế độ toàn màn hình
+
 header_label = tk.Label(root, text="Phần mềm Xử lý ảnh", font=("Helvetica", 14, "bold"), fg="red")
 header_label.pack(side="top", pady=10)
-def center_text(widget):
-    widget.update_idletasks()
-    x = (widget.winfo_width() - root.winfo_reqwidth()) // 2
-    root.geometry(f"+{x}+0")
-center_text(header_label)
+
 root.configure(bg="pink") 
-# Tạo khung chứa các thành phần
-frame_left = tk.Frame(root, bd=2, relief=tk.SOLID)
-frame_right = tk.Frame(root, bd=2, relief=tk.SOLID)
+
+frame_left = tk.Frame(root, bd=2, relief=tk.SOLID, width=650, height=500)
+frame_right = tk.Frame(root, bd=2, relief=tk.SOLID, width=650, height=500)
+
 frame_left.pack(side="left", padx=20, pady=20)
 frame_right.pack(side="left", padx=20, pady=20)
 
-# Tạo khung con trong frame_left để hiển thị ảnh gốc
-image_frame_left = tk.Frame(frame_left, bd=2, relief=tk.SOLID)
-image_frame_left.pack()
+# Ngăn các khung từ việc thay đổi kích thước
+frame_left.pack_propagate(False)
+frame_right.pack_propagate(False)
 
-# Tạo khung con trong frame_right để hiển thị ảnh đã điều chỉnh và các điều khiển
-image_frame_right = tk.Frame(frame_right, bd=2, relief=tk.SOLID)
-image_frame_right.pack()
+# Tạo một canvas bên trong khung bên phải
+canvas_right = tk.Canvas(frame_right)
+canvas_right.pack(side=tk.LEFT, expand=True, fill='both')
 
-# Tạo các nhãn cho khung trái và khung phải
-label_org = tk.Label(image_frame_left, width=65, height=250)
-label_adj = tk.Label(image_frame_right, width=65, height=250)
+# Tạo một thanh cuộn cho canvas bên phải
+scrollbar_right = tk.Scrollbar(frame_right, orient="vertical", command=canvas_right.yview)
+scrollbar_right.pack(side=tk.RIGHT, fill=tk.Y)
+
+# Cấu hình canvas bên phải
+canvas_right.configure(yscrollcommand=scrollbar_right.set)
+canvas_right.bind('<Configure>', lambda e: canvas_right.configure(scrollregion=canvas_right.bbox("all")))
+
+# Tạo một khung khác bên trong canvas bên phải
+image_frame_right = tk.Frame(canvas_right)
+
+# Thêm khung mới vào canvas bên phải
+canvas_right.create_window((0,0), window=image_frame_right, anchor="nw")
+
+label_org = tk.Label(frame_left, width=700, height=700)
+label_adj = tk.Label(image_frame_right, width=700, height=700)
+
 label_org.pack()
 label_adj.pack()
 
@@ -454,11 +610,15 @@ menu_bar.add_cascade(label="Tệp", menu=file_menu)
 edit_menu = tk.Menu(menu_bar)
 edit_menu.add_command(label="Điều chỉnh độ sáng ", command=adjust_brightness)
 edit_menu.add_command(label="Điều chỉnh độ tương phản", command=adjust_contrast)
+edit_menu.add_command(label="Điều chỉnh độ sáng và độ tương phản", command=adjust_brightness_contrast)
 edit_menu.add_command(label="Hiệu chỉnh gamma", command=adjust_gamma)
 edit_menu.add_command(label="Hiệu ứng mờ viền", command=vignette_effect)
 edit_menu.add_command(label="Cân bằng ánh sáng ảnh", command=equalize_image)
 edit_menu.add_command(label="Xoay ảnh", command=rotate_image)
 menu_bar.add_cascade(label="Chỉnh sửa", menu=edit_menu)
-
+menu_help = tk.Menu(menu_bar)
+menu_bar.add_cascade(label="Trợ giúp", menu=menu_help)
+exit_menu= tk.Menu(menu_bar)
+menu_bar.add_cascade(label="Thoát", menu=exit_menu)
 # Main loop
 root.mainloop()
