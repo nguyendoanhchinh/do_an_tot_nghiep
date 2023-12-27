@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bdc2706d-0b13-4877-8a38-7bd240de674d" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/change.py" beforeDir="false" afterPath="$PROJECT_DIR$/change.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/doan.py" beforeDir="false" afterPath="$PROJECT_DIR$/doan.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test .py" beforeDir="false" afterPath="$PROJECT_DIR$/test .py" afterDir="false" />
-    </list>
+    <list default="true" id="bdc2706d-0b13-4877-8a38-7bd240de674d" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -136,6 +132,7 @@
       <updated>1702747279042</updated>
       <workItem from="1702747280154" duration="1855000" />
       <workItem from="1702796586706" duration="596000" />
+      <workItem from="1703602078646" duration="47000" />
     </task>
     <servers />
   </component>
