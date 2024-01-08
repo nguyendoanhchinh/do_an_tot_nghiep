@@ -14,7 +14,7 @@ from tkinter import Scrollbar
 from tkinter import colorchooser
 from math import sin, cos, radians
 # Khởi tạo biến ảnh
-image = img_org = brightness_scale = contrast_scale = gamma_scale = label_org = label_adj = save_button = original_label_width = original_label_height = radius_scale = focus_scale = None
+image = img_org = brightness_scale = contrast_scale = gamma_scale = label_org = label_adj = save_button = original_label_width = original_label_height = radius_scale = focus_scale = radius_scale = focus_x_scale = focus_y_scale =None
 value = 1
 radius = 360
 angle_slider = None
@@ -300,8 +300,7 @@ def adjust_contrast():
     # Gọi hàm cập nhật ảnh đã điều chỉnh
     update_contrast()
 
-# Hàm cân bằng hình ảnh
-
+# Hàm cân bằng màu
 def equalize_image():
     global img_org, label_adj, save_button
 
@@ -326,27 +325,22 @@ def equalize_image():
     v_equalized = k_transform[v.astype(np.uint8)]  # Chuyển đổi về kiểu uint8
     # Gộp các kênh màu lại
     img_hsv_equalized = cv2.merge([h, s, v_equalized.astype(np.uint8)])
-
     # Chuyển đổi định dạng màu từ HSV sang RGB
     img_equalized = cv2.cvtColor(img_hsv_equalized, cv2.COLOR_HSV2RGB)
-
     # Hiển thị ảnh đã điều chỉnh
     adjusted_img = Image.fromarray(img_equalized)
     display_image(adjusted_img, label_adj)
     enable_save_button()
-
-      # Tạo nút "Lưu" nếu chưa tồn tại
+    # Tạo nút "Lưu" nếu chưa tồn tại
     if not save_button or not save_button.winfo_exists():
         save_button = tk.Button(
-            image_frame_right, text="Lưu", command=save_image, state="normal"
-        )
+            image_frame_right, text="Lưu", command=save_image, state="normal")
         save_button.pack()
     else:
         save_button.config(state="normal")
 # Hiệu ứng họa tiết
 def apply_vignette(radius, focus):
     global img_org, label_adj, save_button
-
     # Kiểm tra nếu có widgets của chức năng trước đó, thì hủy bỏ chúng
     destroy_previous_widgets()
     if img_org is None:
@@ -372,49 +366,52 @@ def apply_vignette(radius, focus):
     # Hiển thị ảnh đã điều chỉnh
     display_image(result_image, label_adj)
     enable_save_button()
-#Hiệu ứng làm mờ cạnh
 def vignette_effect():
-    global img_org, label_adj, save_button, radius_scale, focus_scale, value, radius
+    global img_org, label_adj, save_button, radius_scale, focus_x_scale, focus_y_scale, value, radius
     if img_org is None:
         messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
     destroy_previous_widgets()
-    radius_scale = Scale(image_frame_right,from_=0,to=500,orient="horizontal",label="Radius",resolution=1,showvalue=1,sliderlength=20,length=300,command=update_vignette,)
+    # Sửa lại focus_x_scale thành hai thanh scale cho trục x và trục y
+    global focus_x_scale
+    focus_x_scale = Scale(image_frame_right, from_=0, to=10, orient="horizontal", label="Focus X", resolution=1, showvalue=1, sliderlength=20, length=300, command=update_vignette,)
+    focus_x_scale.set(0 if value is None else value)
+    focus_x_scale.pack()
+    global focus_y_scale
+    focus_y_scale = Scale(image_frame_right, from_=0, to=10, orient="horizontal", label="Focus Y", resolution=1, showvalue=1, sliderlength=20, length=300, command=update_vignette,)
+    focus_y_scale.set(0 if value is None else value)
+    focus_y_scale.pack()
+    global radius_scale
+    radius_scale = Scale(image_frame_right, from_=0, to=500, orient="horizontal", label="Radius", resolution=1, showvalue=1, sliderlength=20, length=300, command=update_vignette,)
     radius_scale.set(0 if radius is None else radius)
     radius_scale.pack()
-    focus_scale = Scale(image_frame_right, from_=0,to=10,orient="horizontal",label="Focus",resolution=1,showvalue=1,sliderlength=20,length=300,command=update_vignette,)
-    focus_scale.set(0 if value is None else value)
-    focus_scale.pack()
-    save_button = tk.Button(
-        image_frame_right, text="Lưu", command=save_image, state="disabled")
+    global save_button
+    save_button = tk.Button(image_frame_right, text="Lưu", command=save_image, state="disabled")
     save_button.pack()
     update_vignette()
-
 def update_vignette(*args):
-    global img_org, label_adj, radius_scale, focus_scale, value, radius
+    global img_org, label_adj, radius_scale, focus_x_scale, focus_y_scale, value, radius
     if img_org is None:
         return
     radius = radius_scale.get()
-    value = focus_scale.get()
+    global focus_x_scale
+    value = focus_x_scale.get()
+    focus_x = focus_x_scale.get()
+    focus_y = focus_y_scale.get()
     img_array = np.array(img_org)
-    img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-    # Generating vignette mask using Gaussian kernels
-    kernel_x = cv2.getGaussianKernel(int(img_array.shape[1] * (0.1 * value + 1)), radius)
-    kernel_y = cv2.getGaussianKernel(int(img_array.shape[0] * (0.1 * value + 1)), radius)
+    img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)  # Change to HSV color space
+    kernel_x = cv2.getGaussianKernel(int(img_array.shape[1] * (0.1 * focus_x + 1)), radius)
+    kernel_y = cv2.getGaussianKernel(int(img_array.shape[0] * (0.1 * focus_y + 1)), radius)
     kernel = kernel_y * kernel_x.T
-    # Normalizing the kernel
     kernel = kernel / np.linalg.norm(kernel)
-    # Generating a mask to image
     mask = 255 * kernel
-    mask_imposed = mask[int(0.1 * value * img_array.shape[0]):, int(0.1 * value * img_array.shape[1]):]
-    # Applying the mask to each channel in the input image
+    mask_imposed = mask[int(0.1 * focus_y * img_array.shape[0]):, int(0.1 * focus_x * img_array.shape[1]):]
     output = np.copy(img_array)
-    for i in range(3):
-        output[:, :, i] = output[:, :, i] * mask_imposed
-    # Display the adjusted image
-    adjusted_img = Image.fromarray(cv2.cvtColor(output, cv2.COLOR_BGR2RGB))
+    output[:, :, 2] = output[:, :, 2] * mask_imposed  # Apply the mask to the Value channel
+    adjusted_img = Image.fromarray(cv2.cvtColor(output, cv2.COLOR_HSV2RGB))  # Change back to RGB color space
     display_image(adjusted_img, label_adj)
     enable_save_button()
+
 
 # Hàm để xoay hình ảnh
 def rotate_image():
@@ -542,6 +539,10 @@ def destroy_previous_widgets():
         radius_scale.destroy()
     if focus_scale is not None:
         focus_scale.destroy()
+    if focus_x_scale is not None:
+        focus_x_scale.destroy()
+    if focus_y_scale is not None:
+        focus_y_scale.destroy()
     # Check if save_button exists before destroying
     if save_button is not None and save_button.winfo_exists():
         save_button.destroy()
@@ -613,7 +614,7 @@ edit_menu.add_command(label="Điều chỉnh độ tương phản", command=adju
 edit_menu.add_command(label="Điều chỉnh độ sáng và độ tương phản", command=adjust_brightness_contrast)
 edit_menu.add_command(label="Hiệu chỉnh gamma", command=adjust_gamma)
 edit_menu.add_command(label="Hiệu ứng mờ viền", command=vignette_effect)
-edit_menu.add_command(label="Cân bằng ánh sáng ảnh", command=equalize_image)
+edit_menu.add_command(label="Cân bằng màu", command=equalize_image)
 edit_menu.add_command(label="Xoay ảnh", command=rotate_image)
 menu_bar.add_cascade(label="Chỉnh sửa", menu=edit_menu)
 menu_help = tk.Menu(menu_bar)
