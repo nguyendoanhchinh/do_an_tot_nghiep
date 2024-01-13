@@ -409,6 +409,7 @@ def update_vignette(*args):
     enable_save_button()
 
 
+
 # Hàm để xoay hình ảnh
 def rotate_image():
     # Khai báo các biến toàn cục sẽ được sử dụng trong hàm

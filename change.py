@@ -36,6 +36,7 @@ def center_window(window, width, height):
 # Hàm này sẽ mở tệp ảnh
 def open_file():
     global image, label_org, img_org, original_label_width, original_label_height
+    #Mở hộp thoại cho phép người dùng chọn tệp từ hệ thống
     file_path = filedialog.askopenfilename()
     if file_path:
         if file_path.lower().endswith(
@@ -98,7 +99,8 @@ def adjust_brightness():
         messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
     # Tạo thanh điều chỉnh độ sáng
-    brightness_scale = Scale(image_frame_right,from_=-255,to=255,orient="horizontal",label="Độ sáng",showvalue=1,sliderlength=20,length=300,command=update_brightness,)
+    brightness_scale = Scale(image_frame_right,from_=-255,to=255,orient="horizontal",label="Độ sáng",
+                             showvalue=1,sliderlength=20,length=300,command=update_brightness,)
     brightness_scale.pack()
     # Tạo nút "Lưu"
     save_button = tk.Button(
@@ -118,54 +120,6 @@ def update_brightness(*args):
     display_image(adjusted_img, label_adj)
     enable_save_button()
 
-# Hàm điều chỉnh độ tương phản
-def truncate(value):
-    return max(0, min(255, value))
-
-def adjust_value(value, contrast_val):
-    if contrast_val > 0:
-        return truncate(int((value - 128) * (contrast_val + 1) + 128))
-    else:
-        return truncate(int(value / (abs(contrast_val) + 1)))
-
-def update_contrast(*args):
-    global img_org, contrast_scale, label_adj
-
-    if img_org is None:
-        return
-    contrast_val = contrast_scale.get()
-    adjusted_img = img_org.copy()
-
-    # Điều chỉnh độ tương phản
-    for x in range(adjusted_img.width):
-        for y in range(adjusted_img.height):
-            r, g, b = adjusted_img.getpixel((x, y))
-            new_r = adjust_value(r, contrast_val)
-            new_g = adjust_value(g, contrast_val)
-            new_b = adjust_value(b, contrast_val)
-            adjusted_img.putpixel((x, y), (new_r, new_g, new_b))
-    # Hiển thị ảnh đã điều chỉnh
-    display_image(adjusted_img, label_adj)
-    enable_save_button()
-
-def adjust_contrast():
-    global img_org, contrast_scale, label_adj, save_button
-
-    # Kiểm tra nếu có widgets của chức năng trước đó, thì hủy bỏ chúng
-    destroy_previous_widgets()
-    if img_org is None:
-        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
-        return
-    # Tạo thanh điều chỉnh độ tương phản
-    contrast_scale = Scale(image_frame_right,from_=-3,to=3.0,orient="horizontal",label="Độ tương phản",resolution=0.1,showvalue=1,sliderlength=20,length=300,command=update_contrast,)
-    contrast_scale.pack()
-    # Tạo nút "Lưu"
-    save_button = tk.Button(
-        image_frame_right, text="Lưu", command=save_image, state="disabled"
-    )
-    save_button.pack()
-    # Gọi hàm cập nhật ảnh đã điều chỉnh
-    update_contrast()
 def adjust_brightness_contrast():
     global img_org, brightness_scale, contrast_scale, label_adj, save_button
 
@@ -175,10 +129,12 @@ def adjust_brightness_contrast():
         messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
     # Tạo thanh điều chỉnh độ sáng
-    brightness_scale = Scale(image_frame_right,from_=-255,to=255,orient="horizontal",label="Độ sáng",showvalue=1,sliderlength=20,length=300,command=update_brightness_contrast,)
+    brightness_scale = Scale(image_frame_right,from_=-255,to=255,orient="horizontal",label="Độ sáng",
+                             showvalue=1,sliderlength=20,length=300,command=update_brightness_contrast,)
     brightness_scale.pack()
     # Tạo thanh điều chỉnh độ tương phản
-    contrast_scale = Scale(image_frame_right,from_=-3,to=3.0,orient="horizontal",label="Độ tương phản",resolution=0.1,showvalue=1,sliderlength=20,length=300,command=update_brightness_contrast,)
+    contrast_scale = Scale(image_frame_right,from_=-3,to=3.0,orient="horizontal",label="Độ tương phản",
+                           resolution=0.1,showvalue=1,sliderlength=20,length=300,command=update_brightness_contrast,)
     contrast_scale.pack()
     # Tạo nút "Lưu"
     save_button = tk.Button(
@@ -187,7 +143,6 @@ def adjust_brightness_contrast():
     save_button.pack()
     # Gọi hàm cập nhật ảnh đã điều chỉnh
     update_brightness_contrast()
-
 def update_brightness_contrast(*args):
     global img_org, brightness_scale, contrast_scale, label_adj
     if img_org is None:
@@ -219,7 +174,8 @@ def adjust_gamma():
         messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
     # Tạo thanh điều chỉnh gamma
-    gamma_scale = Scale(image_frame_right,from_=0.1,to=5,orient="horizontal",label="Gamma",resolution=0.1,showvalue=1,sliderlength=20,length=300,command=update_gamma,)
+    gamma_scale = Scale(image_frame_right,from_=0.1,to=5,orient="horizontal",label="Gamma",
+                        resolution=0.1,showvalue=1,sliderlength=20,length=300,command=update_gamma,)
     gamma_scale.pack()
     # Tạo nút "Lưu"
     save_button = tk.Button(
@@ -286,7 +242,8 @@ def adjust_contrast():
         messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
     # Tạo thanh điều chỉnh độ tương phản
-    contrast_scale = Scale(image_frame_right,from_=-3,to=3.0,orient="horizontal",label="Độ tương phản",resolution=0.1,showvalue=1,sliderlength=20,length=300,command=update_contrast,)
+    contrast_scale = Scale(image_frame_right,from_=-3,to=3.0,orient="horizontal",label="Độ tương phản",
+                           resolution=0.1,showvalue=1,sliderlength=20,length=300,command=update_contrast,)
     contrast_scale.pack()
     # Tạo nút "Lưu"
     save_button = tk.Button(
@@ -334,85 +291,109 @@ def equalize_image():
         save_button.pack()
     else:
         save_button.config(state="normal")
+
 # Hiệu ứng họa tiết
 def apply_vignette(radius, focus):
     global img_org, label_adj, save_button
-    # Kiểm tra nếu có widgets của chức năng trước đó, thì hủy bỏ chúng
     destroy_previous_widgets()
     if img_org is None:
         messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
-    # Tính toán kích thước mới của ảnh để vừa vào nhãn
+    #Thay đổi kích thước hình ảnh gốc để phù hợp với thành phần giao diện người dùng
     img_resized = resize_image_to_label(
         img_org, label_adj.winfo_width(), label_adj.winfo_height())
-    # Chuyển đổi ảnh thành mảng NumPy
+    # Chuyển đổi hình ảnh đã thay đổi kích thước thành mảng NumPy để xử lý
     img_array = np.array(img_resized)
-    # Tính toán mask vignette
+    # Thay đổi không gian màu HSV
+    img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)  
     rows, cols = img_array.shape[:2]
     mask = np.zeros((rows, cols), dtype=np.uint8)
     center = (cols // 2, rows // 2)
+    # Áp dụng mặt lạ lên ảnh HSV
     for i in range(rows):
         for j in range(cols):
             distance = np.sqrt((i - center[1]) ** 2 + (j - center[0]) ** 2)
             mask[i, j] = 255 * (1 - (distance / (radius * focus)))
-    # Áp dụng mask lên ảnh
-    result_image = cv2.merge([img_array[:,:,0] * (mask / 255.0), img_array[:,:,1] * (mask / 255.0), img_array[:,:,2] * (mask / 255.0)])
-    # Chuyển đổi kết quả thành ảnh Image
+    # Chỉ áp dụng mặt nạ cho kênh Giá trị
+    img_array[:,:,2] = img_array[:,:,2] * (mask / 255.0)
+    #Thay đổi trở lại không gian màu RGB
+    result_image = cv2.cvtColor(img_array, cv2.COLOR_HSV2RGB)
     result_image = Image.fromarray(result_image.astype('uint8'))
-    # Hiển thị ảnh đã điều chỉnh
     display_image(result_image, label_adj)
     enable_save_button()
 def vignette_effect():
+    # Khởi tạo các biến toàn cục
     global img_org, label_adj, save_button, radius_scale, focus_x_scale, focus_y_scale, value, radius
+    # Kiểm tra xem có hình ảnh nào được mở hay không
     if img_org is None:
         messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
         return
+    # Hủy các widget trước đó
     destroy_previous_widgets()
-    # Sửa lại focus_x_scale thành hai thanh scale cho trục x và trục y
-    global focus_x_scale
-    focus_x_scale = Scale(image_frame_right, from_=0, to=10, orient="horizontal", label="Focus X", resolution=1, showvalue=1, sliderlength=20, length=300, command=update_vignette,)
+    # Tạo thanh trượt cho focus_x
+    focus_x_scale = Scale(image_frame_right, from_=0, to=10, orient="horizontal",
+                          label="Focus X", resolution=0, showvalue=0,
+                          sliderlength=20, length=300, command=update_vignette,)
     focus_x_scale.set(0 if value is None else value)
     focus_x_scale.pack()
-    global focus_y_scale
-    focus_y_scale = Scale(image_frame_right, from_=0, to=10, orient="horizontal", label="Focus Y", resolution=1, showvalue=1, sliderlength=20, length=300, command=update_vignette,)
+    # Tạo thanh trượt cho focus_y
+    focus_y_scale = Scale(image_frame_right, from_=0, to=10, orient="horizontal",
+                          label="Focus Y", resolution=1, showvalue=0,
+                          sliderlength=20, length=300, command=update_vignette,)
     focus_y_scale.set(0 if value is None else value)
     focus_y_scale.pack()
-    global radius_scale
-    radius_scale = Scale(image_frame_right, from_=0, to=500, orient="horizontal", label="Radius", resolution=1, showvalue=1, sliderlength=20, length=300, command=update_vignette,)
+    # Tạo thanh trượt cho bán kính
+    radius_scale = Scale(image_frame_right, from_=0, to=500, orient="horizontal",
+                         label="Radius", resolution=1, showvalue=0,
+                         sliderlength=20, length=300, command=update_vignette,)
     radius_scale.set(0 if radius is None else radius)
     radius_scale.pack()
-    global save_button
+    # Tạo nút Lưu
     save_button = tk.Button(image_frame_right, text="Lưu", command=save_image, state="disabled")
     save_button.pack()
-    update_vignette()
+    # Hiển thị ảnh gốc khi khởi tạo thanh trượt
+    display_image(img_org, label_adj)
+
+# Hàm cập nhật hiệu ứng họa tiết
 def update_vignette(*args):
+    # Khởi tạo các biến toàn cục
     global img_org, label_adj, radius_scale, focus_x_scale, focus_y_scale, value, radius
+    # Kiểm tra xem có hình ảnh nào được mở hay không
     if img_org is None:
         return
+    # Tạo một bản sao của hình ảnh gốc
+    img_copy = img_org.copy()
+    # Lấy giá trị hiện tại của radius, focus_x, và focus_y từ các thanh trượt
     radius = radius_scale.get()
-    global focus_x_scale
-    value = focus_x_scale.get()
     focus_x = focus_x_scale.get()
     focus_y = focus_y_scale.get()
-    img_array = np.array(img_org)
-    img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)  # Change to HSV color space
+    # Chuyển đổi hình ảnh thành mảng NumPy
+    img_array = np.array(img_copy)
+    # Thay đổi không gian màu sang HSV
+    img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+    # Tạo mặt nạ Gaussian
     kernel_x = cv2.getGaussianKernel(int(img_array.shape[1] * (0.1 * focus_x + 1)), radius)
     kernel_y = cv2.getGaussianKernel(int(img_array.shape[0] * (0.1 * focus_y + 1)), radius)
     kernel = kernel_y * kernel_x.T
     kernel = kernel / np.linalg.norm(kernel)
     mask = 255 * kernel
     mask_imposed = mask[int(0.1 * focus_y * img_array.shape[0]):, int(0.1 * focus_x * img_array.shape[1]):]
+    # Tạo một bản sao của mảng hình ảnh
     output = np.copy(img_array)
-    output[:, :, 2] = output[:, :, 2] * mask_imposed  # Apply the mask to the Value channel
-    adjusted_img = Image.fromarray(cv2.cvtColor(output, cv2.COLOR_HSV2RGB))  # Change back to RGB color space
+    # Áp dụng mặt nạ lên kênh Giá trị (Value) của hình ảnh HSV
+    output[:, :, 2] = np.clip(output[:, :, 2] * mask_imposed, 0, 255)
+    # Chuyển đổi hình ảnh trở lại không gian màu RGB
+    adjusted_img = Image.fromarray(cv2.cvtColor(output, cv2.COLOR_HSV2RGB))
+    # Hiển thị hình ảnh đã được điều chỉnh trên giao diện người dùng
     display_image(adjusted_img, label_adj)
+    # Kích hoạt nút Lưu
     enable_save_button()
 
 
 # Hàm để xoay hình ảnh
 def rotate_image():
     # Khai báo các biến toàn cục sẽ được sử dụng trong hàm
-    global img_org, angle_slider, label_adj, rotated_image_canvas, angle_var, rotated_img, save_button
+    global img_org, angle_slider, label_adj, rotated_image_canvas, angle_var ,rotated_img, save_button
 
     # Hủy các widget trước đó (nếu có)
     destroy_previous_widgets()
@@ -427,7 +408,8 @@ def rotate_image():
     angle_var.trace('w', lambda *args: update_rotation_from_entry(angle_var.get()))
 
     # Tạo một thanh trượt để điều chỉnh góc xoay
-    angle_slider = Scale(image_frame_right, from_=0, to=360, orient="horizontal", label="Góc xoay", showvalue=0, sliderlength=20, length=300, command=update_rotation_from_slider)
+    angle_slider = Scale(image_frame_right, from_=0, to=360, orient="horizontal", label="Góc xoay",
+                         showvalue=0, sliderlength=20, length=300, command=update_rotation_from_slider)
     angle_slider.pack()
     # Tạo một hộp nhập liệu để nhập góc xoay
     angle_entry = Entry(image_frame_right, textvariable=angle_var)
@@ -450,7 +432,7 @@ def choose_color():
     if color_code[0] is None:  # Người dùng đã hủy bỏ hộp thoại chọn màu
         return
     # Chuyển đổi màu đã chọn thành bộ giá trị RGB
-    margin_color = tuple(int(color_code[0][i]) for i in range(3))  # Convert to RGB tuple
+    margin_color = tuple(int(color_code[0][i]) for i in range(3))  
     # Cập nhật hình ảnh xoay với màu nền mới
     rotate_and_display(angle_slider.get())
 
@@ -522,8 +504,10 @@ def update_rotation_from_entry(angle_val):
     angle_slider.set(angle_val)  
     # Xoay hình ảnh và hiển thị nó
     rotate_and_display(angle_val)
+def exit_menu():
+    root.destroy()
 def destroy_previous_widgets():
-    global brightness_scale, contrast_scale, gamma_scale, save_button,radius_scale, focus_scale
+    global brightness_scale, contrast_scale, gamma_scale, save_button,radius_scale,focus_scale,angle_slider
 
     if brightness_scale is not None:
         brightness_scale.destroy()
@@ -539,6 +523,9 @@ def destroy_previous_widgets():
         focus_x_scale.destroy()
     if focus_y_scale is not None:
         focus_y_scale.destroy()
+    if angle_slider is not None:
+        angle_slider.destroy()
+     
     # Check if save_button exists before destroying
     if save_button is not None and save_button.winfo_exists():
         save_button.destroy()
@@ -588,8 +575,15 @@ image_frame_right = tk.Frame(canvas_right)
 # Thêm khung mới vào canvas bên phải
 canvas_right.create_window((0,0), window=image_frame_right, anchor="nw")
 
-label_org = tk.Label(frame_left, width=700, height=700)
-label_adj = tk.Label(image_frame_right, width=700, height=700)
+label_org = tk.Label(frame_left, width=680, height=700)
+label_adj = tk.Label(image_frame_right, width=680, height=700)
+# Tạo nhãn cho khung mở ảnh
+#label_frame_left = tk.Label(frame_left, text="Khung mở ảnh", font=("Helvetica", 14, "bold"), anchor="center", justify="center")
+#label_frame_left.pack(side="top")
+
+# Tạo nhãn cho khung xử lý
+#label_frame_right = tk.Label(frame_right, text="Khung xử lý", font=("Helvetica", 14, "bold"))
+#label_frame_right.place(relx=0.5, rely=0.028, anchor='center')
 
 label_org.pack()
 label_adj.pack()

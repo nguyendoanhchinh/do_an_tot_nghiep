@@ -12,14 +12,10 @@ from tkinter import Scale
 from tkinter import Scrollbar
 from tkinter import colorchooser
 from math import sin, cos, radians
-
-image = img_org = brightness_scale = contrast_scale = gamma_scale = label_org = label_adj = save_button = original_label_width = original_label_height = radius_scale = focus_scale = radius_scale = focus_x_scale = focus_y_scale = None
-
 def enable_save_button():
     global save_button
     if save_button is not None and save_button.winfo_exists():
         save_button.config(state="normal")
-
 def center_window(window, width, height):
     screen_width = window.winfo_screenwidth()
     screen_height = window.winfo_screenheight()
@@ -47,7 +43,6 @@ def open_file():
             enable_save_button()
         else:
             messagebox.showwarning("Lỗi", "Định dạng ảnh không được hỗ trợ.")
-
 def resize_image_to_label(img, label_width, label_height):
     aspect_ratio = img.width / img.height
     new_width = min(img.width, label_width)
@@ -56,20 +51,16 @@ def resize_image_to_label(img, label_width, label_height):
         new_height = label_height
         new_width = int(new_height * aspect_ratio)
     return img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-
 def update_label_size(label, width, height):
     label.config(width=width, height=height)
-
 def display_image(img, label):
     photo = ImageTk.PhotoImage(img)
     label.configure(image=photo)
     label.image = photo
-
 def enable_save_button():
     global save_button
     if save_button is not None and save_button.winfo_exists():
         save_button.config(state="normal")
-
 def save_image():
     global label_adj
     if label_adj.image:
@@ -85,52 +76,16 @@ def save_image():
             adjusted_img = ImageTk.getimage(label_adj.image)
             adjusted_img.save(image_path)
 
-def equalize_image():
-    global img_org, label_adj, save_button
-    destroy_previous_widgets()
-    if img_org is None:
-        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
-        return
-    img_array = np.array(img_org)
-    img_hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
-    h, s, v = cv2.split(img_hsv)
-    hist, bins = np.histogram(v.flatten(), 256, [0, 256])
-    cdf = hist.cumsum()
-    k_transform = (cdf - cdf.min()) / (cdf.max() - cdf.min()) * 255
-    v_equalized = k_transform[v.astype(np.uint8)]  
-    img_hsv_equalized = cv2.merge([h, s, v_equalized.astype(np.uint8)])
-    img_equalized = cv2.cvtColor(img_hsv_equalized, cv2.COLOR_HSV2RGB)
-    adjusted_img = Image.fromarray(img_equalized)
-    display_image(adjusted_img, label_adj)
-    enable_save_button()
-    if not save_button or not save_button.winfo_exists():
-        save_button = tk.Button(
-            frame_right, text="Lưu", command=save_image, state="normal")
-        save_button.pack(side="bottom", pady=10)
-    else:
-        save_button.config(state="normal")
-
-def destroy_previous_widgets():
-    global brightness_scale, contrast_scale, gamma_scale, save_button, radius_scale, focus_scale
-    if brightness_scale is not None:
-        brightness_scale.destroy()
-    if contrast_scale is not None:
-        contrast_scale.destroy()
-    if gamma_scale is not None:
-        gamma_scale.destroy()
-    if radius_scale is not None:
-        radius_scale.destroy()
-    if focus_scale is not None:
-        focus_scale.destroy()
-    if save_button is not None and save_button.winfo_exists():
-        save_button.destroy()
+def sharpen_image():
+    return true
 
 def on_mousewheel(event):
     canvas_right.yview_scroll(int(-1 * (event.delta / 120)), "units")
     canvas_left.yview_scroll(int(-1 * (event.delta / 120)), "units")
     canvas_right.bind_all("<MouseWheel>", on_mousewheel)
     canvas_left.bind_all("<MouseWheel>", on_mousewheel)
-
+def sharpen_image():
+    return true
 root = tk.Tk()
 root.title("Phần mềm Xử lý ánh sáng ảnh")
 root.state('zoomed')
@@ -153,6 +108,15 @@ image_frame_right = tk.Frame(canvas_right)
 canvas_right.create_window((0, 0), window=image_frame_right, anchor="nw")
 label_org = tk.Label(frame_left, width=700, height=700)
 label_adj = tk.Label(image_frame_right, width=700, height=700)
+# Tạo nhãn cho khung mở ảnh
+label_frame_left = tk.Label(frame_left, text="Khung mở ảnh", font=("Helvetica", 14, "bold"), anchor="center", justify="center")
+label_frame_left.pack(side="top")
+
+# Tạo nhãn cho khung xử lý
+label_frame_right = tk.Label(frame_right, text="Khung xử lý", font=("Helvetica", 14, "bold"))
+label_frame_right.place(relx=0.5, rely=0.024, anchor='center')
+
+
 label_org.pack()
 label_adj.pack()
 menu_bar = tk.Menu(root)
@@ -164,7 +128,7 @@ file_menu.add_separator()
 file_menu.add_command(label="Thoát", command=root.destroy)
 menu_bar.add_cascade(label="Tệp", menu=file_menu)
 edit_menu = tk.Menu(menu_bar)
-edit_menu.add_command(label="Cân bằng màu", command=equalize_image)
+edit_menu.add_command(label="Làm sắc nét hình ảnh", command=sharpen_image)
 menu_bar.add_cascade(label="Chỉnh sửa", menu=edit_menu)
 menu_help = tk.Menu(menu_bar)
 menu_bar.add_cascade(label="Trợ giúp", menu=menu_help)
