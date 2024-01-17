@@ -3,7 +3,7 @@ import cv2
 import tkinter as tk
 from tkinter import filedialog
 import matplotlib.pyplot as plt
-from tkinter import Entry, StringVar, Scale,Tk, Label, Button, PhotoImage
+from tkinter import Entry, StringVar, Scale,Tk, Label, Button, PhotoImage,Toplevel,Menu
 from PIL import Image, ImageTk
 from tkinter.filedialog import askopenfilename
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -13,6 +13,10 @@ from tkinter import Scale
 from tkinter import Scrollbar
 from tkinter import colorchooser
 from math import sin, cos, radians
+import argparse
+from os.path import join, exists, basename, splitext, dirname
+import os
+from exposure_enhancement import enhance_image_exposure
 # Khởi tạo biến ảnh
 image = img_org = brightness_scale = contrast_scale = gamma_scale = label_org = label_adj = save_button = original_label_width = original_label_height = radius_scale = focus_scale = radius_scale = focus_x_scale = focus_y_scale =None
 value = 1
@@ -232,6 +236,79 @@ def update_contrast(*args):
     # Hiển thị ảnh đã điều chỉnh
     display_image(adjusted_img, label_adj)
     enable_save_button()
+
+#Tăng cường ánh sáng
+def enhance_image():
+    global img_org, img_adj, label_adj, save_button
+    destroy_previous_widgets()
+    def apply_changes(gamma_var, lambda_var, sigma_var):
+        global img_adj, label_adj,save_button
+        if img_org is None:
+            messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
+            return
+        try:
+             # Chuyển đổi từ PIL Image thành mảng NumPy
+            image_np = np.array(img_org)
+
+            # Thiết lập các tham số cho việc tăng cường ánh sáng
+            args = argparse.Namespace(
+                gamma=float(gamma_var.get()),
+                lambda_=float(lambda_var.get()),
+                lime=False,
+                sigma=float(sigma_var.get()),
+                bc=1,
+                bs=1,
+                be=1,
+                eps=1e-3
+            )
+
+            # Gọi hàm enhance_image_exposure từ exposure_enhancement
+            enhanced_image = enhance_image_exposure(
+                image_np, args.gamma, args.lambda_, not args.lime,
+                sigma=args.sigma, bc=args.bc, bs=args.bs, be=args.be, eps=args.eps
+            )
+
+            img_adj = Image.fromarray(enhanced_image)
+            # Hiển thị bên khung
+            display_image(img_adj, label_adj)
+            # Tạo nút "Lưu" nếu chưa tồn tại
+            if save_button is None or not save_button.winfo_exists():
+                save_button = tk.Button(
+                    image_frame_right, text="Lưu", command=save_image, state="disabled"
+                )
+                save_button.pack()
+            enable_save_button()
+
+        except ValueError:
+            messagebox.showwarning("Lỗi", "Vui lòng nhập giá trị số hợp lệ cho các tham số!")
+
+    def open_parameter_window():
+        parameter_window = Toplevel(root)
+        parameter_window.title("Cấu hình Tăng cường Ánh sáng")
+
+        # Tạo các ô nhập giá trị
+        gamma_var = StringVar(value="0.1")
+        lambda_var = StringVar(value="0.1")
+        sigma_var = StringVar(value="3.0")
+
+
+        Entry(parameter_window, textvariable=gamma_var).grid(row=0, column=1)
+        Entry(parameter_window, textvariable=lambda_var).grid(row=1, column=1)
+        Entry(parameter_window, textvariable=sigma_var).grid(row=2, column=1)
+
+
+        Label(parameter_window, text="Gamma:").grid(row=0, column=0)
+        Label(parameter_window, text="Lambda:").grid(row=1, column=0)
+        Label(parameter_window, text="Sigma:").grid(row=2, column=0)
+
+
+        Button(parameter_window, text="Thực hiện",
+               command=lambda: apply_changes(gamma_var, lambda_var, sigma_var)).grid(row=6,
+                                                                                                             column=0,
+                                                                                                             columnspan=2)
+
+    open_parameter_window()
+
 
 def adjust_contrast():
     global img_org, contrast_scale, label_adj, save_button
@@ -603,6 +680,7 @@ edit_menu.add_command(label="Điều chỉnh độ sáng ", command=adjust_brigh
 edit_menu.add_command(label="Điều chỉnh độ tương phản", command=adjust_contrast)
 edit_menu.add_command(label="Điều chỉnh độ sáng và độ tương phản", command=adjust_brightness_contrast)
 edit_menu.add_command(label="Hiệu chỉnh gamma", command=adjust_gamma)
+edit_menu.add_command(label="Tăng cường ánh sáng", command=enhance_image)
 edit_menu.add_command(label="Hiệu ứng mờ viền", command=vignette_effect)
 edit_menu.add_command(label="Cân bằng màu", command=equalize_image)
 edit_menu.add_command(label="Xoay ảnh", command=rotate_image)
