@@ -15,17 +15,17 @@ def create_spacial_affinity_kernel(spatial_sigma: float, size: int = 15):
         spatial_sigma {float} -- Độ lệch chuẩn không gian.
 
     Tham số Mặc định:
-        size {int} -- Kích thước của kernel. (mặc định: {15})aa
+        size {int} -- Kích thước của kernel. (mặc định: {15})
     Returns:
         np.ndarray - Ma trận kernel `size` * `size`
     """
     kernel = np.zeros((size, size))
     for i in range(size):
         for j in range(size):
-            kernel[i, j] = np.exp(-0.5 * (distance.euclidean((i, j), (size // 2, size // 2)) ** 2) / (spatial_sigma ** 2))
+            kernel[i, j] = np.exp(-0.5 * (distance.euclidean((i, j),
+                                                             (size // 2, size // 2)) ** 2) / (spatial_sigma ** 2))
 
     return kernel
-
 
 def compute_smoothness_weights(L: np.ndarray, x: int, kernel: np.ndarray, eps: float = 1e-3):
     """Tính toán trọng số độ mịn được sử dụng để tinh chỉnh vấn đề tối ưu hóa bản đồ chiếu sáng.
@@ -61,7 +61,7 @@ def fuse_multi_exposure_images(im: np.ndarray, under_ex: np.ndarray, over_ex: np
         be {float} -- Tham số điều khiển ảnh hưởng của đo đạc độ tốt nghiệp của Mertens. (mặc định: {1})
 
     Returns:
-        np.ndarray -- Hình ảnh được hợp nhất. Cùng kích thước với `im`.
+        np.ndarray -- Hình ảnh được hợp nhất.
     """
     merge_mertens = cv2.createMergeMertens(bc, bs, be)
     images = [np.clip(x * 255, 0, 255).astype("uint8") for x in [im, under_ex, over_ex]]
@@ -69,7 +69,6 @@ def fuse_multi_exposure_images(im: np.ndarray, under_ex: np.ndarray, over_ex: np
     return fused_images
 def refine_illumination_map_linear(L: np.ndarray, gamma: float, lambda_: float, kernel: np.ndarray, eps: float = 1e-3):
     """Tinh chỉnh bản đồ chiếu sáng dựa trên bài toán tối ưu hóa được mô tả trong hai bài báo.
-       Hàm này sử dụng trình giải nhanh hơn được trình bày trong bài báo LIME.
     Tham số:
         L {np.ndarray} -- Bản đồ chiếu sáng cần được tinh chỉnh.
         gamma {float} -- Hệ số sửa gamma.
@@ -108,7 +107,7 @@ def refine_illumination_map_linear(L: np.ndarray, gamma: float, lambda_: float, 
     return L_refined
 
 def correct_underexposure(im: np.ndarray, gamma: float, lambda_: float, kernel: np.ndarray, eps: float = 1e-3):
-    """Chỉnh sửa sự thiếu sáng bằng thuật toán dựa trên retinex được trình bày trong các bài báo DUAL và LIME.
+    """Chỉnh sửa sự thiếu sáng bằng thuật toán dựa trên retinex  DUAL và LIME.
 
     Tham số:
         im {np.ndarray} -- Hình ảnh đầu vào cần được chỉnh sửa.
@@ -120,7 +119,7 @@ def correct_underexposure(im: np.ndarray, gamma: float, lambda_: float, kernel: 
         eps {float} -- Hằng số nhỏ để tránh không ổn định trong tính toán (mặc định: {1e-3})
 
     Returns:
-        np.ndarray -- Hình ảnh được chỉnh sửa vì thiếu sáng. Cùng hình dạng với `im`.
+        np.ndarray -- Hình ảnh được chỉnh sửa vì thiếu sáng.
     """
 
     # Ước lượng đầu tiên của bản đồ chiếu sáng
@@ -137,23 +136,23 @@ def correct_underexposure(im: np.ndarray, gamma: float, lambda_: float, kernel: 
 
 def enhance_image_exposure(im: np.ndarray, gamma: float, lambda_: float, dual: bool = True, sigma: int = 3,
                            bc: float = 1, bs: float = 1, be: float = 1, eps: float = 1e-3):
-    """Nâng cao hình ảnh đầu vào, sử dụng phương pháp DUAL hoặc LIME. Để biết thêm thông tin, vui lòng xem các bài báo gốc.
+    """Nâng cao hình ảnh đầu vào, sử dụng phương pháp DUAL hoặc LIME.
 
     Tham số:
         im {np.ndarray} -- Hình ảnh đầu vào cần được chỉnh sửa.
         gamma {float} -- Hệ số sửa gamma.
-        lambda_ {float} -- Hệ số để cân bằng các thành phần trong vấn đề tối ưu hóa (trong DUAL và LIME).
+        lambda_ {float} -- Hệ số để cân bằng trong DUAL và LIME.
 
     Tham số Mặc định:
         dual {bool} -- Biến boolean để chỉ định phương pháp nâng cao sẽ được sử dụng (hoặc DUAL hoặc LIME) (mặc định: {True})
-        sigma {int} -- Độ lệch chuẩn không gian cho trọng số Gaussian dựa trên độ tương quan không gian. (mặc định: {3})
+        sigma {int} -- Độ lệch chuẩn không gian cho trọng số Gaussian dựa trên độ tương quan không gian.
         bc {float} -- Tham số điều khiển ảnh hưởng của đo đạc độ tương phản của Mertens. (mặc định: {1})
         bs {float} -- Tham số điều khiển ảnh hưởng của đo đạc độ bão hòa của Mertens. (mặc định: {1})
         be {float} -- Tham số điều khiển ảnh hưởng của đo đạc độ tốt nghiệp của Mertens. (mặc định: {1})
         eps {float} -- Hằng số nhỏ để tránh không ổn định trong tính toán (mặc định: {1e-3})
 
     Returns:
-        np.ndarray -- Hình ảnh được nâng cao về chiếu sáng. Cùng hình dạng với `im`.
+        np.ndarray -- Hình ảnh được nâng cao về chiếu sáng
     """
     # Tạo kernel tương quan không gian
     kernel = create_spacial_affinity_kernel(sigma)

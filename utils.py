@@ -5,7 +5,7 @@ def get_sparse_neighbor(p: int, n: int, m: int):
 
     Tham số:
         p {int} -- chỉ mục trong ma trận thưa.
-        n {int} -- số hàng trong ma trận gốc (không thưa).
+        n {int} -- số hàng trong ma trận gốc .
         m {int} -- số cột trong ma trận gốc.
 
     Trả về:

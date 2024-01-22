@@ -237,11 +237,31 @@ def update_contrast(*args):
     display_image(adjusted_img, label_adj)
     enable_save_button()
 
+
+def adjust_contrast():
+    global img_org, contrast_scale, label_adj, save_button
+
+    # Kiểm tra nếu có widgets của chức năng trước đó, thì hủy bỏ chúng
+    destroy_previous_widgets()
+    if img_org is None:
+        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
+        return
+    # Tạo thanh điều chỉnh độ tương phản
+    contrast_scale = Scale(image_frame_right,from_=-3,to=3.0,orient="horizontal",label="Độ tương phản",
+                           resolution=0.1,showvalue=1,sliderlength=20,length=300,command=update_contrast,)
+    contrast_scale.pack()
+    # Tạo nút "Lưu"
+    save_button = tk.Button(
+        image_frame_right, text="Lưu", command=save_image, state="disabled"
+    )
+    save_button.pack()
+    # Gọi hàm cập nhật ảnh đã điều chỉnh
+    update_contrast()
 #Tăng cường ánh sáng
 def enhance_image():
     global img_org, img_adj, label_adj, save_button
     destroy_previous_widgets()
-    def apply_changes(gamma_var, lambda_var, sigma_var):
+    def apply_changes(gamma_var, lambda_var, sigma_var,bc_var,bs_var,be_var):
         global img_adj, label_adj,save_button
         if img_org is None:
             messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
@@ -251,14 +271,13 @@ def enhance_image():
             image_np = np.array(img_org)
 
             # Thiết lập các tham số cho việc tăng cường ánh sáng
-            args = argparse.Namespace(
-                gamma=float(gamma_var.get()),
+            args = argparse.Namespace(gamma=float(gamma_var.get()),
                 lambda_=float(lambda_var.get()),
                 lime=False,
                 sigma=float(sigma_var.get()),
-                bc=1,
-                bs=1,
-                be=1,
+                bc=float(bc_var.get()),
+                bs=float(bs_var.get()),
+                be=float(be_var.get()),
                 eps=1e-3
             )
 
@@ -286,49 +305,33 @@ def enhance_image():
         parameter_window = Toplevel(root)
         parameter_window.title("Cấu hình Tăng cường Ánh sáng")
 
-        # Tạo các ô nhập giá trị
+       # Tạo các ô nhập giá trị
         gamma_var = StringVar(value="0.1")
         lambda_var = StringVar(value="0.1")
         sigma_var = StringVar(value="3.0")
+        bc_var = StringVar(value="1.0")
+        bs_var = StringVar(value="1.0")
+        be_var = StringVar(value="1.0")
 
 
         Entry(parameter_window, textvariable=gamma_var).grid(row=0, column=1)
         Entry(parameter_window, textvariable=lambda_var).grid(row=1, column=1)
         Entry(parameter_window, textvariable=sigma_var).grid(row=2, column=1)
-
+        Entry(parameter_window, textvariable=bc_var).grid(row=0, column=1)
+        Entry(parameter_window, textvariable=bs_var).grid(row=1, column=1)
+        Entry(parameter_window, textvariable=be_var).grid(row=2, column=1)
 
         Label(parameter_window, text="Gamma:").grid(row=0, column=0)
         Label(parameter_window, text="Lambda:").grid(row=1, column=0)
         Label(parameter_window, text="Sigma:").grid(row=2, column=0)
-
-
+        Label(parameter_window, text="Độ sáng:").grid(row=3, column=0)
+        Label(parameter_window, text="Độ bão hòa:").grid(row=4, column=0)
+        Label(parameter_window, text="Độ tương phản:").grid(row=5, column=0)
         Button(parameter_window, text="Thực hiện",
-               command=lambda: apply_changes(gamma_var, lambda_var, sigma_var)).grid(row=6,
-                                                                                                             column=0,
-                                                                                                             columnspan=2)
-
+               command=lambda: apply_changes(gamma_var, lambda_var, sigma_var,bc_var,bs_var,be_var)).grid(row=6,
+                                                                                                             column=0,                                                                                             columnspan=2)
     open_parameter_window()
 
-
-def adjust_contrast():
-    global img_org, contrast_scale, label_adj, save_button
-
-    # Kiểm tra nếu có widgets của chức năng trước đó, thì hủy bỏ chúng
-    destroy_previous_widgets()
-    if img_org is None:
-        messagebox.showwarning("Lỗi", "Vui lòng mở một ảnh trước!")
-        return
-    # Tạo thanh điều chỉnh độ tương phản
-    contrast_scale = Scale(image_frame_right,from_=-3,to=3.0,orient="horizontal",label="Độ tương phản",
-                           resolution=0.1,showvalue=1,sliderlength=20,length=300,command=update_contrast,)
-    contrast_scale.pack()
-    # Tạo nút "Lưu"
-    save_button = tk.Button(
-        image_frame_right, text="Lưu", command=save_image, state="disabled"
-    )
-    save_button.pack()
-    # Gọi hàm cập nhật ảnh đã điều chỉnh
-    update_contrast()
 
 # Hàm cân bằng màu
 def equalize_image():
@@ -613,7 +616,21 @@ def on_mousewheel(event):
     canvas_right.bind_all("<MouseWheel>", on_mousewheel)
     canvas_left.bind_all("<MouseWheel>", on_mousewheel)
 
-
+def show_help():
+    """
+    Hiển thị hướng dẫn sử dụng chương trình.
+    """
+    help_text = """
+    Hướng dẫn sử dụng chương trình:
+    1. Mở: Mở file ảnh từ đường dẫn được cung cấp.
+    2. Điều chỉnh độ sáng: Tăng hoặc giảm độ sáng của ảnh.
+    3. Điều chỉnh độ tương phản: Tăng hoặc giảm độ tương phản của ảnh.
+    4. Điều chỉnh gamma: Điều chỉnh giá trị gamma của ảnh.
+    5. Cân bằng màu: Điều chỉnh cân bằng màu sắc của ảnh.
+    6. Hiệu ứng mờ viền: Thêm hiệu ứng mờ viền cho ảnh.
+    7. Thoát: Thoát khỏi chương trình.
+    """
+    messagebox.showinfo("Trợ giúp", help_text)
 # Tạo cửa sổ gốc
 root = tk.Tk()
 root.title("Phần mềm Xử lý ánh sáng ảnh")
@@ -685,8 +702,9 @@ edit_menu.add_command(label="Hiệu ứng mờ viền", command=vignette_effect)
 edit_menu.add_command(label="Cân bằng màu", command=equalize_image)
 edit_menu.add_command(label="Xoay ảnh", command=rotate_image)
 menu_bar.add_cascade(label="Chỉnh sửa", menu=edit_menu)
-menu_help = tk.Menu(menu_bar)
-menu_bar.add_cascade(label="Trợ giúp", menu=menu_help)
+help_menu = tk.Menu(menu_bar)
+help_menu.add_command(label="Hướng dẫn sử dụng", command=show_help)
+menu_bar.add_cascade(label="Trợ giúp", menu=help_menu)
 exit_menu= tk.Menu(menu_bar)
 menu_bar.add_cascade(label="Thoát", menu=exit_menu)
 # Main loop
